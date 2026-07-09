@@ -35,37 +35,34 @@ Mobile-first single-page app (390×844 phone frame), state persisted to `localSt
   render logic; screens (`src/screens/`) mirror the prototype markup with inline styles for
   pixel fidelity.
 
-## Develop
-
-```bash
-npm install
-npm run dev        # runs the API (:3000) + Vite dev server together; Vite proxies /api → :3000
-npm run typecheck  # tsc, no emit
-```
-
 ## Backend & data
 
-Accounts and per-user data live in a **local SQLite file** (`data/gym.db`), served by a
-tiny Express API in `server/` — no Supabase, no cloud. The client talks to it via relative
-`/api/...` paths (`src/lib/api.ts`), so the same build works on `localhost` or through an
-ngrok tunnel.
+Deployed on **Vercel**: the app is a static Vite build, the API is **serverless
+functions** in `api/`, and accounts + per-user data live in **Turso** (hosted
+libSQL / SQLite). The client talks to the API via relative `/api/...` paths
+(`src/lib/api.ts`).
 
 - `POST /api/auth/signup` · `POST /api/auth/login` · `GET /api/auth/session` · `POST /api/auth/logout`
 - `GET /api/state` · `PUT /api/state` — the personalized JSON blob, one row per account
 - Passwords are hashed with scrypt; sessions are bearer tokens stored in `localStorage`.
-- `data/` is git-ignored — your database never leaves your machine.
+- Shared logic lives in `api/_lib/` (not routed by Vercel).
 
-## Run & share (localhost + ngrok)
+Env vars (set in Vercel, and in `.env.local` for local dev):
+`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`.
+
+## Develop & deploy
 
 ```bash
-npm start          # build the single-file app + serve app and API on http://localhost:3000
-# in another terminal:
-npm run tunnel     # ngrok http 3000 → a public https URL you can open on your phone
+npm install
+npm run db:init    # create tables in Turso (once) — reads .env.local
+npm run dev        # vercel dev — runs the app + API locally, same as prod
+npm run typecheck  # tsc, no emit
+npm run deploy     # vercel --prod → your permanent https URL
 ```
 
-First-time ngrok setup: `brew install ngrok`, then `ngrok config add-authtoken <token>`
-(from https://dashboard.ngrok.com). Open the printed `https://…ngrok…app` URL on your
-phone, sign up once, and your data persists to the SQLite file on your Mac.
+Push to `main` also triggers an automatic production deploy on Vercel. Open the
+Vercel URL on any device, sign up once, and your data syncs to Turso — no Mac
+required.
 
 The app uses the Anton / Archivo / Archivo Expanded webfonts from Google Fonts (see
 `index.html`); it degrades to system fonts where that CDN is unreachable.

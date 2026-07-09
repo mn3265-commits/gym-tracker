@@ -1,13 +1,14 @@
 node_modules
 dist
-dist-single
 dist-ssr
 *.local
 .DS_Store
 .vite
 
-# local SQLite database (your data — never commit); root only, not src/data
-/data/
+# Vercel + secrets (Turso credentials live in .env.local, covered by *.local)
+.vercel
+.env
+.env*.local
 
 tsconfig.app.tsbuildinfo
 tsconfig.node.tsbuildinfo

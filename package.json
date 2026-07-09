@@ -5,18 +5,15 @@
   "type": "module",
   "description": "Personalized gym tracker for muscle gain — target weights, splits, movement swaps, body map and progress tracking.",
   "scripts": {
-    "dev": "concurrently -k -n server,web -c green,cyan \"npm:server\" \"npm:dev:web\"",
-    "dev:web": "vite",
-    "server": "node --disable-warning=ExperimentalWarning server/index.js",
-    "build": "tsc -b && vite build --config vite.singlefile.config.ts",
-    "serve": "node --disable-warning=ExperimentalWarning server/index.js",
-    "start": "npm run build && npm run serve",
-    "tunnel": "ngrok http 3000",
+    "dev": "vercel dev",
+    "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "db:init": "node scripts/init-db.mjs",
+    "deploy": "vercel --prod"
   },
   "dependencies": {
-    "express": "^4.21.2",
+    "@libsql/client": "^0.14.0",
     "html-to-image": "^1.11.13",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
@@ -25,10 +22,8 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "concurrently": "^9.1.0",
     "playwright-core": "^1.49.1",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11",
-    "vite-plugin-singlefile": "^2.1.0"
+    "vite": "^5.4.11"
   }
 }
