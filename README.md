@@ -1,5 +1,8 @@
 # BUILDNOTBOUGHT
 
+**Live: https://buildnotbought.vercel.app** — sign in on your phone and add it to your
+home screen; it launches fullscreen, no browser chrome.
+
 A personalized, dark/athletic gym tracker for muscle gain — built from a Claude Design
 prototype into a real React app. Track a Push · Pull · Legs · Rest · Lower · Upper · Rest
 split, log workouts against **target weights** that tell you exactly what to hit to grow,
