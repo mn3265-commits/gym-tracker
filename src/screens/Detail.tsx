@@ -27,7 +27,7 @@ export function Detail({ vm }: { vm: ViewModel }) {
       <div style={{ padding: '0 20px', display: 'flex', gap: 12, marginBottom: 16 }}>
         <div style={{ flex: 1, position: 'relative', height: 200, borderRadius: 18, overflow: 'hidden', border: '1px solid #2a2a31', background: '#0f0f12' }}>
           <div style={{ position: 'absolute', inset: 0, padding: 10 }}>
-            <MovementPreview name={d.name} tempo={d.tempo} />
+            <MovementPreview name={d.performedName} tempo={d.tempo} />
           </div>
           <span
             style={{
@@ -81,15 +81,23 @@ export function Detail({ vm }: { vm: ViewModel }) {
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#CCFF00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7" /></svg>
           <div style={{ fontFamily: "'Archivo Expanded','Archivo'", fontSize: 14, fontWeight: 800, color: '#F4F4F5' }}>Can't do it? Swap for</div>
         </div>
-        <div style={{ fontFamily: "'Archivo'", fontSize: 12, color: '#7d7d86', fontWeight: 500, marginBottom: 12 }}>Same muscles, different kit — pick whatever's free.</div>
+        <div style={{ fontFamily: "'Archivo'", fontSize: 12, color: '#7d7d86', fontWeight: 500, marginBottom: 12 }}>
+          {d.swapped ? `Training ${d.performedName} instead — tap to change back.` : "Same muscles, different kit — pick whatever's free."}
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           {d.alts.map((a, i) => (
-            <div key={i} style={{ background: '#141417', border: '1px solid #26262c', borderRadius: 13, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: '#1a1a1e', border: '1px solid #2a2a31', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a8a93" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h16M6.5 8v8M4 9.5v5M17.5 8v8M20 9.5v5" /></svg>
+            <div
+              key={i}
+              onClick={a.onPick}
+              role="button"
+              aria-pressed={a.active}
+              style={{ cursor: 'pointer', background: a.bg, border: `1px solid ${a.border}`, borderRadius: 13, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}
+            >
+              <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${a.dotBorder}`, background: 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.dotBg }} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: "'Archivo'", fontSize: 14, fontWeight: 700, color: '#F4F4F5' }}>{a.name}</div>
+                <div style={{ fontFamily: "'Archivo'", fontSize: 14, fontWeight: 700, color: a.nameColor }}>{a.name}</div>
                 <div style={{ fontFamily: "'Archivo'", fontSize: 12, color: '#7d7d86', fontWeight: 500 }}>{a.equip} · {a.note} · {a.weightStr}</div>
               </div>
             </div>

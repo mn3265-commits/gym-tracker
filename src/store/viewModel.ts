@@ -402,6 +402,7 @@ function build(S: AppState, A: Actions) {
   const de = ex.find((x) => x.id === S.exId) || ex[0]!
   const dri = roleInfo(de.role)
   const dUnit = unitOf(de.name)
+  const dPerformed = S.swaps[de.id] || de.name
   const detail = {
     name: de.name,
     group: de.group,
@@ -411,12 +412,29 @@ function build(S: AppState, A: Actions) {
     roleBg: dri.bg,
     roleBorder: dri.border,
     equip: equipOf(de.name),
-    alts: resolveAlts(de, S.lifts).map((a) => ({
-      name: a.n,
-      note: a.w,
-      equip: equipOf(a.n),
-      weightStr: `${kg(a.current, a.n)} → ${kg(a.goal, a.n)}`,
-    })),
+    swapped: dPerformed !== de.name,
+    performedName: dPerformed,
+    // Tapping a row actually performs the swap. The original lift is the first
+    // row, so a swap can always be undone from here.
+    alts: [
+      { n: de.name, w: 'Original movement', orig: true, current: de.current, goal: de.goal },
+      ...resolveAlts(de, S.lifts).map((a) => ({ n: a.n, w: a.w, orig: false, current: a.current, goal: a.goal })),
+    ].map((a) => {
+      const active = dPerformed === a.n
+      return {
+        name: a.n,
+        note: a.w,
+        equip: equipOf(a.n),
+        weightStr: `${kg(a.current, a.n)} → ${kg(a.goal, a.n)}`,
+        active,
+        onPick: () => A.chooseSwap(de.id, a.orig ? null : a.n),
+        bg: active ? '#1c2408' : '#141417',
+        border: active ? '#2f3d0a' : '#26262c',
+        nameColor: active ? VOLT : '#F4F4F5',
+        dotBorder: active ? VOLT : '#33333b',
+        dotBg: active ? VOLT : 'transparent',
+      }
+    }),
     unitLabel: dUnit.toUpperCase(),
     unitKgBg: dUnit === 'kg' ? VOLT : 'transparent',
     unitKgColor: dUnit === 'kg' ? '#0B0B0D' : '#8a8a93',

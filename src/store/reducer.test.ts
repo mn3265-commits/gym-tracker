@@ -127,3 +127,23 @@ describe('HYDRATE — backward compatibility with pre-progression saves', () => 
     expect(s.lifts['Bench Press']!.current).toBe(85)
   })
 })
+
+describe('CHOOSE_SWAP outside a workout (the Detail screen)', () => {
+  it('records the swap even when no workout is running', () => {
+    const s = reducer(initialState, { type: 'CHOOSE_SWAP', id: 1, name: 'Dumbbell Bench Press' })
+    expect(s.workout).toBeNull()
+    expect(s.swaps[1]).toBe('Dumbbell Bench Press')
+  })
+
+  it('clearing it from Detail restores the original lift', () => {
+    let s = reducer(initialState, { type: 'CHOOSE_SWAP', id: 1, name: 'Dumbbell Bench Press' })
+    s = reducer(s, { type: 'CHOOSE_SWAP', id: 1, name: null })
+    expect(s.swaps[1]).toBeUndefined()
+  })
+
+  it('a swap chosen from Detail is what the next workout programs', () => {
+    let s = reducer(initialState, { type: 'CHOOSE_SWAP', id: 1, name: 'Machine Chest Press' })
+    s = reducer(s, { type: 'START_WORKOUT', trainType: 'Push' })
+    expect(s.workout!.exercises.find((e) => e.id === 1)!.name).toBe('Machine Chest Press')
+  })
+})
