@@ -35,12 +35,15 @@ export function Login() {
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 28px', overflowY: 'auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#CCFF00" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 12h16M6.5 8v8M4 9.5v5M17.5 8v8M20 9.5v5" />
-        </svg>
-        <span style={{ fontFamily: "'Archivo'", fontSize: 14, fontWeight: 800, color: '#F4F4F5', letterSpacing: '1.5px' }}>GYM TRACKER</span>
-      </div>
+      {/* On signup the headline reads BUILD, NOT BOUGHT — it is the wordmark, so don't repeat it. */}
+      {mode === 'in' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#CCFF00" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 12h16M6.5 8v8M4 9.5v5M17.5 8v8M20 9.5v5" />
+          </svg>
+          <span style={{ fontFamily: "'Archivo'", fontSize: 14, fontWeight: 800, color: '#F4F4F5', letterSpacing: '1.5px' }}>BUILDNOTBOUGHT</span>
+        </div>
+      )}
       <div style={{ fontFamily: "'Anton'", fontSize: 44, color: '#F4F4F5', textTransform: 'uppercase', lineHeight: 0.98, marginBottom: 6 }}>
         {mode === 'in' ? 'Welcome back' : (
           <>

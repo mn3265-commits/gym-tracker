@@ -1,4 +1,4 @@
-# Gym Tracker
+# BUILDNOTBOUGHT
 
 A personalized, dark/athletic gym tracker for muscle gain — built from a Claude Design
 prototype into a real React app. Track a Push · Pull · Legs · Rest · Lower · Upper · Rest

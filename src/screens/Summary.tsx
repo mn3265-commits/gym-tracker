@@ -92,7 +92,7 @@ export function Summary({ vm }: { vm: ViewModel }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 26 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CCFF00" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h16M6.5 8v8M4 9.5v5M17.5 8v8M20 9.5v5" /></svg>
-                <span style={{ fontFamily: "'Archivo'", fontSize: 13, fontWeight: 800, color: '#F4F4F5', letterSpacing: '1.5px' }}>GYM TRACKER</span>
+                <span style={{ fontFamily: "'Archivo'", fontSize: 13, fontWeight: 800, color: '#F4F4F5', letterSpacing: '1.5px' }}>BUILDNOTBOUGHT</span>
               </div>
               <span style={{ display: 'inline-block', transform: 'rotate(-3deg)', transformOrigin: 'center', marginRight: 3, background: s.color, color: '#0B0B0D', fontFamily: "'Anton'", fontSize: 12, padding: '5px 10px', borderRadius: 8, letterSpacing: '1px' }}>COMPLETE</span>
             </div>
