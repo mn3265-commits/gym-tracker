@@ -146,13 +146,40 @@ export interface Summary {
 }
 
 export interface WeightEntry {
-  label: string
+  /** local YYYY-MM-DD. Optional: entries saved before dates existed only have `label`. */
+  date?: string
+  /** legacy label from older saves; every row used to say "This week" */
+  label?: string
   w: number
 }
 
 export interface Profile {
   bw: string
   height: string
+  /** what he wants to be called; falls back to the account email's local part */
+  name?: string
+  /** bodyweight target in kg — his, not a constant */
+  goalWeight?: string
+}
+
+/** The four tape measurements, in cm. Every field optional: log what you measured. */
+export interface MeasureEntry {
+  /** local YYYY-MM-DD */
+  date: string
+  chest?: number
+  arms?: number
+  waist?: number
+  thighs?: number
+}
+
+/** Things the user can change. Defaults live in store/settings.ts. */
+export interface Settings {
+  /** seconds of rest auto-started when a set is checked off */
+  restSeconds: number
+  /** sessions per week he's aiming for */
+  weekGoal: number
+  /** show the "avoid these" coaching block */
+  showTips: boolean
 }
 
 export type FlashKind = { good: boolean; msg: string }
@@ -170,3 +197,4 @@ export type Screen =
   | 'summary'
   | 'setup'
   | 'achievements'
+  | 'settings'

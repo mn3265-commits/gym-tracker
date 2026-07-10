@@ -16,8 +16,3 @@ export const C: Record<Group, string> = {
 /** Volt green — the primary brand accent. */
 export const VOLT = '#CCFF00'
 
-export const font = {
-  display: "'Anton', sans-serif",
-  expanded: "'Archivo Expanded', 'Archivo', sans-serif",
-  sans: "'Archivo', sans-serif",
-}

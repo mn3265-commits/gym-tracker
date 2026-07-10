@@ -14,6 +14,7 @@ import { Body } from './screens/Body'
 import { Summary } from './screens/Summary'
 import { Setup } from './screens/Setup'
 import { Achievements } from './screens/Achievements'
+import { Settings } from './screens/Settings'
 import { Login } from './screens/Login'
 import { useAuth } from './store/auth'
 
@@ -65,6 +66,7 @@ export default function App() {
                 {vm.isSummary && <Summary vm={vm} />}
                 {vm.isSetup && <Setup vm={vm} />}
                 {vm.isAchievements && <Achievements vm={vm} />}
+                {vm.isSettings && <Settings vm={vm} />}
               </div>
             </div>
 

@@ -60,14 +60,14 @@ export function Progress({ vm }: { vm: ViewModel }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 16 }}>
           <div style={{ background: '#0f0f12', border: '1px solid #26262c', borderRadius: 13, padding: 11 }}>
             <div style={{ fontFamily: "'Anton'", fontSize: 19, color: '#F4F4F5', lineHeight: 1 }}>{vm.prog.currentStr}</div>
-            <div style={{ fontFamily: "'Archivo'", fontSize: 10, color: '#7d7d86', fontWeight: 700, marginTop: 4 }}>CURRENT</div>
+            <div style={{ fontFamily: "'Archivo'", fontSize: 10, color: '#7d7d86', fontWeight: 700, marginTop: 4 }}>{vm.prog.currentLabel}</div>
           </div>
           <div style={{ background: '#0f0f12', border: '1px solid #2f3d0a', borderRadius: 13, padding: 11 }}>
             <div style={{ fontFamily: "'Anton'", fontSize: 19, color: '#CCFF00', lineHeight: 1 }}>{vm.prog.nextStr}</div>
             <div style={{ fontFamily: "'Archivo'", fontSize: 10, color: '#a9c93f', fontWeight: 700, marginTop: 4 }}>NEXT UP</div>
           </div>
           <div style={{ background: '#0f0f12', border: '1px solid #26262c', borderRadius: 13, padding: 11 }}>
-            <div style={{ fontFamily: "'Anton'", fontSize: 19, color: '#F4F4F5', lineHeight: 1 }}>+{vm.prog.gained}</div>
+            <div style={{ fontFamily: "'Anton'", fontSize: 19, color: vm.prog.trained ? '#F4F4F5' : '#54545c', lineHeight: 1 }}>{vm.prog.gainedStr}</div>
             <div style={{ fontFamily: "'Archivo'", fontSize: 10, color: '#7d7d86', fontWeight: 700, marginTop: 4 }}>GAINED KG</div>
           </div>
         </div>

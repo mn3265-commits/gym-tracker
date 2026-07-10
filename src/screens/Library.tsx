@@ -24,7 +24,7 @@ export function Library({ vm }: { vm: ViewModel }) {
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div style={{ fontFamily: "'Anton'", fontSize: 17, color: '#F4F4F5', lineHeight: 1 }}>{e.currentNum}</div>
-              <div style={{ fontFamily: "'Archivo'", fontSize: 10, color: '#61616a', fontWeight: 700, letterSpacing: '.3px' }}>CURRENT {e.unitLabel}</div>
+              <div style={{ fontFamily: "'Archivo'", fontSize: 10, color: '#61616a', fontWeight: 700, letterSpacing: '.3px' }}>{e.weightLabel} {e.unitLabel}</div>
             </div>
           </div>
         ))}

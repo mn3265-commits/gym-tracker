@@ -1,5 +1,4 @@
 import { initialState, type AppState } from './state'
-import { SETTINGS } from './settings'
 import type { FlashKind, Group, Screen, Session, Summary, SummaryStatus, Unit, Workout, WorkoutExercise } from '../data/types'
 import {
   effectiveExercises,
@@ -13,14 +12,14 @@ import {
   setCount,
 } from '../lib/calc'
 import { dayKey } from '../lib/day'
-import type { LiftProgress } from '../data/types'
+import type { LiftProgress, MeasureEntry } from '../data/types'
 
 export type Action =
   | { type: 'NAV'; screen: Screen }
   | { type: 'OPEN_EX'; id: number }
   | { type: 'SET_PROG'; id: number }
   | { type: 'SET_FILTER'; filter: string }
-  | { type: 'SET_PROFILE_FIELD'; k: 'bw' | 'height'; v: string }
+  | { type: 'SET_PROFILE_FIELD'; k: 'bw' | 'height' | 'name' | 'goalWeight'; v: string }
   | { type: 'SET_LOG_INPUT'; v: string }
   | { type: 'OPEN_LOG' }
   | { type: 'CLOSE_LOG' }
@@ -34,7 +33,16 @@ export type Action =
   | { type: 'TOGGLE_SET'; ei: number; si: number }
   | { type: 'BUMP'; ei: number; si: number; d: number }
   | { type: 'BUMP_REPS'; ei: number; si: number; d: number }
+  /** direct entry — `kg` is always kilograms, the caller converts from lb */
+  | { type: 'SET_WEIGHT'; ei: number; si: number; kg: number }
+  | { type: 'SET_REPS'; ei: number; si: number; reps: number }
+  | { type: 'DELETE_SET'; ei: number; si: number }
   | { type: 'ADD_SET'; ei: number }
+  | { type: 'TOGGLE_ADD_EX' }
+  | { type: 'ADD_EXERCISE'; id: number }
+  | { type: 'REMOVE_EXERCISE'; ei: number }
+  | { type: 'SET_SETTING'; k: keyof AppState['settings']; v: number | boolean }
+  | { type: 'ADD_MEASUREMENT'; entry: MeasureEntry }
   | { type: 'TICK_REST' }
   | { type: 'ADD_REST'; sec: number }
   | { type: 'SKIP_REST' }
@@ -48,16 +56,50 @@ export type Action =
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T
 
+/** Sanity floor for a typed bodyweight — below this it's a typo, not a person. */
+const MIN_BODYWEIGHT_KG = 25
+
+/**
+ * XP rules. These are game design, not user data: showing up is worth more than
+ * any single set, and hitting a target is worth five sets of merely turning up.
+ */
+const XP = { perSet: 10, perTargetHit: 50, perSession: 100 } as const
+
 const effEx = (s: AppState) => effectiveExercises(s.profile.bw, s.tailoredDone, s.lifts)
 const unitOf = (s: AppState, name: string): Unit => s.units[name] || 'kg'
+
+/** Program one exercise slot: honour the saved swap and the earned weight. */
+function programExercise(state: AppState, e: ReturnType<typeof effEx>[number]): WorkoutExercise {
+  const st = performedStats(e, state.swaps, state.lifts)
+  const nx = nextWeight(st)
+  const rt = repTop(e)
+  return {
+    id: e.id,
+    name: st.name,
+    muscle: e.primary,
+    next: nx,
+    group: e.group,
+    sets: Array.from({ length: setCount(e) }, () => ({
+      weight: nx,
+      reps: rt,
+      goalReps: rt,
+      target: nx,
+      prev: `${fmtWeight(st.current, unitOf(state, st.name))} × ${rt}`,
+      done: false,
+    })),
+  }
+}
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'HYDRATE': {
-      // A blob saved before earned progression existed simply has no `lifts`.
-      // Never let a missing/!object value reach the view model as undefined.
+      // Blobs saved by older builds have no `lifts` / `settings` / `measureLog`.
+      // Never let a missing or malformed value reach the view model as undefined.
       const next = { ...state, ...action.data }
       if (!next.lifts || typeof next.lifts !== 'object') next.lifts = {}
+      if (!Array.isArray(next.measureLog)) next.measureLog = []
+      next.settings = { ...initialState.settings, ...(next.settings ?? {}) }
+      if (!next.profile || typeof next.profile !== 'object') next.profile = { ...initialState.profile }
       return next
     }
     case 'RESET':
@@ -74,6 +116,18 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'SET_PROFILE_FIELD':
       return { ...state, profile: { ...state.profile, [action.k]: action.v } }
 
+    case 'SET_SETTING':
+      return { ...state, settings: { ...state.settings, [action.k]: action.v } }
+
+    case 'ADD_MEASUREMENT': {
+      const e = action.entry
+      const has = (Object.keys(e) as (keyof MeasureEntry)[]).some((k) => k !== 'date' && typeof e[k] === 'number')
+      if (!has) return state
+      // one entry per day: re-logging today replaces it rather than stacking
+      const rest = state.measureLog.filter((m) => m.date !== e.date)
+      return { ...state, measureLog: [...rest, e].sort((a, b) => a.date.localeCompare(b.date)).slice(-60) }
+    }
+
     case 'SET_LOG_INPUT':
       return { ...state, logInput: action.v }
     case 'OPEN_LOG':
@@ -83,11 +137,11 @@ export function reducer(state: AppState, action: Action): AppState {
 
     case 'ADD_WEIGHT': {
       const w = parseFloat(state.logInput)
-      if (!w || w < 25) return state
+      if (!w || w < MIN_BODYWEIGHT_KG) return state
       const rounded = Math.round(w * 10) / 10
       return {
         ...state,
-        weightLog: [...state.weightLog, { label: 'This week', w: rounded }].slice(-10),
+        weightLog: [...state.weightLog, { date: dayKey(new Date()), w: rounded }].slice(-10),
         profile: { ...state.profile, bw: String(w) },
         logInput: '',
         logModalOpen: false,
@@ -96,7 +150,7 @@ export function reducer(state: AppState, action: Action): AppState {
 
     case 'GENERATE_TARGETS': {
       const bw = parseFloat(state.profile.bw)
-      if (!bw || bw < 25) return state
+      if (!bw || bw < MIN_BODYWEIGHT_KG) return state
       const log = state.weightLog
       const bwNum = Math.round(bw * 10) / 10
       const shouldLog = !log.length || log[log.length - 1]!.w !== bw
@@ -104,7 +158,7 @@ export function reducer(state: AppState, action: Action): AppState {
         ...state,
         tailoredDone: true,
         screen: 'home',
-        weightLog: shouldLog ? [...log, { label: 'This week', w: bwNum }].slice(-10) : log,
+        weightLog: shouldLog ? [...log, { date: dayKey(new Date()), w: bwNum }].slice(-10) : log,
       }
     }
 
@@ -151,29 +205,9 @@ export function reducer(state: AppState, action: Action): AppState {
       const todayEx = exercisesForType(ex, trainType)
       const workout: Workout = {
         type: trainType,
-        exercises: todayEx.map<WorkoutExercise>((e) => {
-          // Honour a saved swap: train the movement he actually picked, at its weights.
-          const st = performedStats(e, state.swaps, state.lifts)
-          const nx = nextWeight(st)
-          const rt = repTop(e)
-          return {
-            id: e.id,
-            name: st.name,
-            muscle: e.primary,
-            next: nx,
-            group: e.group,
-            sets: Array.from({ length: setCount(e) }, () => ({
-              weight: nx,
-              reps: rt,
-              goalReps: rt,
-              target: nx,
-              prev: `${fmtWeight(st.current, unitOf(state, st.name))} × ${rt}`,
-              done: false,
-            })),
-          }
-        }),
+        exercises: todayEx.map<WorkoutExercise>((e) => programExercise(state, e)),
       }
-      return { ...state, workout, elapsed: 0, screen: 'train' }
+      return { ...state, workout, elapsed: 0, screen: 'train', addExOpen: false }
     }
 
     case 'TICK_ELAPSED':
@@ -198,7 +232,7 @@ export function reducer(state: AppState, action: Action): AppState {
         }
       }
       if (willBeDone) {
-        const dur = SETTINGS.restSeconds
+        const dur = state.settings.restSeconds
         return { ...state, workout: w, flash, rest: dur, restDur: dur, restActive: true, restOwner: { ei, si } }
       }
       return { ...state, workout: w, flash }
@@ -220,13 +254,78 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, workout: w }
     }
 
+    case 'SET_WEIGHT': {
+      if (!state.workout) return state
+      const w = clone(state.workout)
+      const cell = w.exercises[action.ei]?.sets[action.si]
+      if (!cell) return state
+      if (!Number.isFinite(action.kg) || action.kg < 0) return state
+      // quarter-kilo, so a weight typed in lb survives the round trip back to lb
+      cell.weight = Math.min(999, Math.round(action.kg * 4) / 4)
+      return { ...state, workout: w }
+    }
+
+    case 'SET_REPS': {
+      if (!state.workout) return state
+      const w = clone(state.workout)
+      const cell = w.exercises[action.ei]?.sets[action.si]
+      if (!cell) return state
+      if (!Number.isFinite(action.reps) || action.reps < 0) return state
+      cell.reps = Math.min(999, Math.round(action.reps))
+      return { ...state, workout: w }
+    }
+
+    case 'DELETE_SET': {
+      if (!state.workout) return state
+      const { ei, si } = action
+      const arr = state.workout.exercises[ei]?.sets
+      // an exercise with zero sets would break ADD_SET (it copies the last set)
+      if (!arr || arr.length <= 1 || !arr[si]) return state
+      const w = clone(state.workout)
+      w.exercises[ei]!.sets.splice(si, 1)
+      // a rest timer pinned to a removed (or now-shifted) row would point at the wrong set
+      const stale = state.restOwner != null && state.restOwner.ei === ei && state.restOwner.si >= si
+      return stale
+        ? { ...state, workout: w, restActive: false, rest: 0, restOwner: null }
+        : { ...state, workout: w }
+    }
+
     case 'ADD_SET': {
       if (!state.workout) return state
       const w = clone(state.workout)
-      const arr = w.exercises[action.ei]!.sets
-      const last = arr[arr.length - 1]!
-      arr.push({ weight: last.weight, reps: last.reps, goalReps: last.goalReps, target: last.target, prev: '—', done: false })
+      const arr = w.exercises[action.ei]?.sets
+      if (!arr) return state
+      const last = arr[arr.length - 1]
+      const src = last ?? { weight: w.exercises[action.ei]!.next, reps: 0, goalReps: 0, target: w.exercises[action.ei]!.next }
+      arr.push({ weight: src.weight, reps: src.reps, goalReps: src.goalReps, target: src.target, prev: '—', done: false })
       return { ...state, workout: w }
+    }
+
+    case 'TOGGLE_ADD_EX':
+      return { ...state, addExOpen: !state.addExOpen }
+
+    case 'ADD_EXERCISE': {
+      if (!state.workout) return state
+      // adding the same lift twice would fold its progression in twice on finish
+      if (state.workout.exercises.some((e) => e.id === action.id)) return { ...state, addExOpen: false }
+      const src = effEx(state).find((e) => e.id === action.id)
+      if (!src) return state
+      const w = clone(state.workout)
+      w.exercises.push(programExercise(state, src))
+      return { ...state, workout: w, addExOpen: false }
+    }
+
+    case 'REMOVE_EXERCISE': {
+      if (!state.workout) return state
+      const { ei } = action
+      if (!state.workout.exercises[ei]) return state
+      const w = clone(state.workout)
+      w.exercises.splice(ei, 1)
+      // the rest timer is addressed by exercise index, which just shifted
+      const stale = state.restOwner != null && state.restOwner.ei >= ei
+      return stale
+        ? { ...state, workout: w, restActive: false, rest: 0, restOwner: null }
+        : { ...state, workout: w }
     }
 
     case 'TICK_REST': {
@@ -286,7 +385,7 @@ export function reducer(state: AppState, action: Action): AppState {
           if (status === 'miss') missCount++
           return { name: swapName, status, setsDone: doneSets.length, setsPlanned: exi.sets.length, muscles: src.muscles }
         })
-        const xpGained = setsDone > 0 ? setsDone * 10 + hitCount * 50 + 100 : 0
+        const xpGained = setsDone > 0 ? setsDone * XP.perSet + hitCount * XP.perTargetHit + XP.perSession : 0
         const before = rankInfo(state.xp)
         const after = rankInfo(state.xp + xpGained)
         summary = {

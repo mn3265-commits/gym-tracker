@@ -7,10 +7,13 @@ export function You({ vm }: { vm: ViewModel }) {
     <div style={{ padding: '10px 20px 0', animation: 'fadeUp .3s ease both' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 22 }}>
         <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg,#26262c,#141417)', border: '1px solid #303038', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Anton'", fontSize: 26, color: '#CCFF00' }}>{vm.userInitial}</div>
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "'Archivo Expanded','Archivo'", fontSize: 22, fontWeight: 800, color: '#F4F4F5' }}>{vm.userName}</div>
-          <div style={{ fontFamily: "'Archivo'", fontSize: 13, color: '#7d7d86', fontWeight: 600 }}>Intermediate · Push · Pull · Legs · +2</div>
+          <div style={{ fontFamily: "'Archivo'", fontSize: 13, color: '#7d7d86', fontWeight: 600 }}>{vm.userSubtitle}</div>
         </div>
+        <button onClick={vm.goSettings} aria-label="Settings" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 12, border: '1px solid #2a2a31', background: '#141417', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9a9aa2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.36.43.65.79.79H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
+        </button>
       </div>
 
       <div onClick={vm.goAchievements} style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden', background: 'linear-gradient(120deg,#1d1d23,#0e0e11)', border: '1px solid #2a2a31', borderRadius: 18, padding: '16px 18px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14 }}>

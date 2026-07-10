@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { useActions, useAppState, type Actions } from './store'
-import { SETTINGS } from './settings'
+import { useAuth } from './auth'
+import { REST_CHOICES } from './settings'
 import { C, VOLT } from '../data/tokens'
 import { BACK_ZONES, EQUIP, FRONT_ZONES } from '../data/exercises'
 import type { AppState } from './state'
-import type { Group, Role } from '../data/types'
-import { MONTHS, dayKey, parseDay, resolveToday, weekDateObjects, weekStartKey } from '../lib/day'
+import type { Group, MeasureEntry, Role } from '../data/types'
+import { MONTHS, dayKey, parseDay, resolveToday, weekDateObjects, weekLabel, weekStartKey } from '../lib/day'
 import {
   bmiFor,
   buildMuscleMap,
@@ -13,12 +14,14 @@ import {
   fmtClock,
   fmtWeight,
   nextWeight,
-  pctVal,
   proteinFor,
   rankInfo,
   renderBody,
   repTop,
+  setCount,
+  earnedPct,
   effectiveExercises,
+  isTrained,
   performedStats,
   resolveAlts,
   toNum,
@@ -33,14 +36,26 @@ const roleInfo = (r: Role) =>
 
 const equipOf = (name: string) => EQUIP[name] || 'Other'
 
-function build(S: AppState, A: Actions) {
+/** "mn3265@columbia.edu" -> "Mn3265". Never invent a name. */
+function nameFromEmail(email: string | undefined): string {
+  const local = (email ?? '').split('@')[0] ?? ''
+  const cleaned = local.replace(/[._-]+/g, ' ').trim()
+  if (!cleaned) return 'You'
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
+}
+
+function build(S: AppState, A: Actions, email?: string) {
   const ex = effectiveExercises(S.profile.bw, S.tailoredDone, S.lifts)
   const unitOf = (name: string) => S.units[name] || 'kg'
   const kg = (n: number, name: string) => fmtWeight(n, unitOf(name))
   const num = (n: number, name: string) => toNum(n, unitOf(name))
 
-  const showTips = SETTINGS.showTips
-  const weekGoal = SETTINGS.weekGoal
+  const showTips = S.settings.showTips
+  const weekGoal = S.settings.weekGoal
+
+  // Who he is: his own name if he set one, else the account. Never "Athlete".
+  const userName = S.profile.name?.trim() || nameFromEmail(email)
+  const userInitial = (userName[0] ?? 'Y').toUpperCase()
   const now = new Date()
   const hr = now.getHours()
   const greeting = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening'
@@ -60,6 +75,7 @@ function build(S: AppState, A: Actions) {
     isSummary: screen === 'summary',
     isSetup: screen === 'setup',
     isAchievements: screen === 'achievements',
+    isSettings: screen === 'settings',
   }
 
   // ── nav ──
@@ -72,7 +88,7 @@ function build(S: AppState, A: Actions) {
   ]
   const activeKey = ['detail', 'library'].includes(screen)
     ? 'library'
-    : ['program', 'history', 'body', 'you', 'achievements', 'setup', 'summary'].includes(screen)
+    : ['program', 'history', 'body', 'you', 'achievements', 'setup', 'summary', 'settings'].includes(screen)
       ? 'you'
       : screen === 'progress'
         ? 'progress'
@@ -97,6 +113,11 @@ function build(S: AppState, A: Actions) {
     Lower: 'Full lower body',
     Rest: 'Recovery',
   }
+  // ~40s of work per set plus his own rest setting; a real estimate, not "11 min each"
+  const WORK_SECONDS_PER_SET = 40
+  const plannedSets = todayEx.reduce((n, e) => n + setCount(e), 0)
+  const estMin = Math.max(1, Math.round((plannedSets * (WORK_SECONDS_PER_SET + S.settings.restSeconds)) / 60))
+
   const today = {
     type: tinfo.type,
     color: tColor,
@@ -106,11 +127,11 @@ function build(S: AppState, A: Actions) {
     trainColor,
     dayLong: dayNames[TODAY_IDX]!,
     count: todayEx.length,
-    est: todayEx.length * 11,
+    est: estMin,
     focusText: focusByType[trainType],
     subtitle: tinfo.isRest
       ? `Rest day · start ${trainType} when you're ready`
-      : `${todayEx.length} exercises · ~${todayEx.length * 11} min · ${focusByType[trainType]}`,
+      : `${todayEx.length} exercises · ~${estMin} min · ${focusByType[trainType]}`,
     startLabel: tinfo.isRest ? `START ${trainType.toUpperCase()} DAY` : 'START WORKOUT',
     exercises: todayEx.map((e, i) => {
       const ri = roleInfo(e.role)
@@ -179,6 +200,17 @@ function build(S: AppState, A: Actions) {
     weekGoal,
   }
 
+  // rank + the split he actually built, rather than "Intermediate · Push · Pull · Legs · +2"
+  const splitCounts = S.program.reduce<Record<string, number>>((m, g) => {
+    if (g !== 'Rest') m[g] = (m[g] ?? 0) + 1
+    return m
+  }, {})
+  const splitNames = Object.keys(splitCounts)
+  const trainingDays = S.program.filter((g) => g !== 'Rest').length
+  const userSubtitle = trainingDays
+    ? `${rankInfo(S.xp).name.charAt(0) + rankInfo(S.xp).name.slice(1).toLowerCase()} · ${splitNames.join(' · ')} · ${trainingDays}\u00d7/week`
+    : 'Rest week · no training days set'
+
   // ── achievements ──
   const anyHeavy = ex.some((e) => e.current >= 100)
   const achDefs = [
@@ -202,6 +234,12 @@ function build(S: AppState, A: Actions) {
     nameColor: a.earned ? '#F4F4F5' : '#7d7d86',
   }))
   const achEarned = achDefs.filter((a) => a.earned).length
+  const achHint =
+    achEarned === 0
+      ? 'Finish one workout to unlock your first'
+      : achEarned === achDefs.length
+        ? 'Every badge unlocked. Go get heavier.'
+        : `${achDefs.length - achEarned} left to unlock`
 
   // ── top targets ──
   // What he should care about today: the lifts he is about to train, heaviest
@@ -210,13 +248,13 @@ function build(S: AppState, A: Actions) {
   const roleRank: Record<Role, number> = { key: 0, main: 1, accessory: 2 }
   const targetPool = todayEx.length ? todayEx : ex
   const topTargets = [...targetPool]
-    .sort((a, b) => roleRank[a.role] - roleRank[b.role] || pctVal(b) - pctVal(a))
+    .sort((a, b) => roleRank[a.role] - roleRank[b.role] || earnedPct(b, S.lifts) - earnedPct(a, S.lifts))
     .slice(0, 4)
     .map((e) => ({
       name: e.name,
       currentStr: kg(e.current, e.name),
       nextStr: kg(nextWeight(e), e.name),
-      pct: `${pctVal(e)}%`,
+      pct: `${earnedPct(e, S.lifts)}%`,
       color: C[e.group],
       onTap: () => {
         A.setProg(e.id)
@@ -304,6 +342,7 @@ function build(S: AppState, A: Actions) {
           swapBorder: swapped ? '#2f3d0a' : '#33333b',
           swapColor: swapped ? VOLT : '#8a8a93',
           onSwap: () => A.toggleSwap(exi.id),
+          onRemoveExercise: () => A.removeExercise(ei),
           altOptions: opts.map((o) => {
             const cur = display === o.name
             const os = o.orig ? src : resolvedAlts.find((a) => a.n === o.name)!
@@ -339,10 +378,10 @@ function build(S: AppState, A: Actions) {
             const met = s.done && s.weight >= s.target && s.reps >= s.goalReps
             const missed = s.done && !met
             const resting = S.restActive && S.restOwner != null && S.restOwner.ei === ei && S.restOwner.si === si
-            const restDur = S.restDur || SETTINGS.restSeconds
+            const restDur = S.restDur || S.settings.restSeconds
             return {
               num: si + 1,
-              prev: s.prev,
+              prev: s.prev.replace(/\s*(kg|lb)\s*/i, '').replace(/\s*\u00d7\s*/, '\u00d7'),
               weight: num(s.weight, display),
               reps: s.reps,
               rowBg: met ? '#12240f' : missed ? '#241408' : 'transparent',
@@ -355,6 +394,11 @@ function build(S: AppState, A: Actions) {
               dec: () => A.bump(ei, si, -stats2.inc),
               repInc: () => A.bumpReps(ei, si, 1),
               repDec: () => A.bumpReps(ei, si, -1),
+              // typed straight into the field; `v` is in the displayed unit
+              commitWeight: (v: number) => A.setWeightKg(ei, si, exUnit === 'lb' ? v / 2.20462 : v),
+              commitReps: (v: number) => A.setReps(ei, si, v),
+              remove: () => A.deleteSet(ei, si),
+              canRemove: exi.sets.length > 1,
               resting,
               restText: fmtClock(S.rest),
               restPct: Math.max(0, Math.min(100, Math.round((S.rest / restDur) * 100))),
@@ -365,6 +409,34 @@ function build(S: AppState, A: Actions) {
           }),
         }
       }),
+
+      // Add a movement mid-session. Anything already in the workout is left out —
+      // training the same lift twice would fold its progression in twice on finish.
+      addPicker: (() => {
+        const present = new Set(W.exercises.map((e) => e.id))
+        const options = ex
+          .filter((e) => !present.has(e.id))
+          .map((e) => {
+            const st = performedStats(e, S.swaps, S.lifts)
+            return {
+              id: e.id,
+              name: st.name,
+              group: e.group,
+              color: C[e.group],
+              scheme: e.scheme,
+              nextStr: kg(nextWeight(st), st.name),
+              equip: equipOf(st.name),
+              onPick: () => A.addExercise(e.id),
+            }
+          })
+        return {
+          open: S.addExOpen,
+          toggle: () => A.toggleAddEx(),
+          options,
+          empty: options.length === 0,
+          emptyHint: 'Every movement in your library is already in this session.',
+        }
+      })(),
     }
   }
   if (S.workout) workout = buildWorkoutVm()
@@ -388,6 +460,7 @@ function build(S: AppState, A: Actions) {
         equip: equipOf(e.name),
         currentNum: num(e.current, e.name),
         unitLabel: unitOf(e.name).toUpperCase(),
+        weightLabel: isTrained(e.name, S.lifts) ? 'CURRENT' : 'SUGGESTED',
         color: C[e.group],
         tint: `${C[e.group]}22`,
         roleLabel: ri.label,
@@ -486,7 +559,7 @@ function build(S: AppState, A: Actions) {
     name: pe.name,
     group: pe.group,
     color: C[pe.group],
-    pct: `${pctVal(pe)}%`,
+    pct: `${earnedPct(pe, S.lifts)}%`,
     hasCurve,
     sessionCount: entries.length,
     emptyHint:
@@ -502,13 +575,16 @@ function build(S: AppState, A: Actions) {
     goalStr: kg(pe.goal, pe.name),
     currentStr: kg(pe.current, pe.name),
     nextStr: kg(nextWeight(pe), pe.name),
-    gained: pe.current - pe.start,
+    // "+20 GAINED" for someone who has never lifted is a lie the seed data told
+    trained: isTrained(pe.name, S.lifts),
+    gainedStr: isTrained(pe.name, S.lifts) ? `+${Math.round((pe.current - pe.start) * 10) / 10}` : '\u2014',
+    currentLabel: isTrained(pe.name, S.lifts) ? 'CURRENT' : 'SUGGESTED',
   }
   const progList = ex.map((e) => ({
     name: e.name,
     currentStr: kg(e.current, e.name),
     goalStr: kg(e.goal, e.name),
-    pct: `${pctVal(e)}%`,
+    pct: `${earnedPct(e, S.lifts)}%`,
     color: C[e.group],
     cardBorder: e.id === S.progId ? C[e.group] : '#26262c',
     onTap: () => A.setProg(e.id),
@@ -602,7 +678,8 @@ function build(S: AppState, A: Actions) {
   const bmiForW = (w: number) => (hNum && hNum > 80 ? (w / Math.pow(hNum / 100, 2)).toFixed(1) : '—')
   const logRows = log
     .map((e, i) => ({
-      label: e.label,
+      // every row used to read "This week"; it now reflects when it was logged
+      label: e.date ? weekLabel(e.date, now) : (e.label ?? '\u2014'),
       w: e.w.toFixed(1),
       bmi: bmiForW(e.w),
       protein: proteinForW(e.w),
@@ -615,12 +692,42 @@ function build(S: AppState, A: Actions) {
     }))
     .reverse()
   const hasProfile = !!parseFloat(S.profile.bw)
+
+  // Real tape measurements. Deltas compare the newest entry to the one before it;
+  // a field only appears once it has actually been measured.
+  const MEASURE_FIELDS: { key: keyof MeasureEntry; name: string; goodUp: boolean }[] = [
+    { key: 'chest', name: 'Chest', goodUp: true },
+    { key: 'arms', name: 'Arms', goodUp: true },
+    { key: 'waist', name: 'Waist', goodUp: false },
+    { key: 'thighs', name: 'Thighs', goodUp: true },
+  ]
+  const latestM = S.measureLog[S.measureLog.length - 1]
+  const measures = latestM
+    ? MEASURE_FIELDS.flatMap(({ key, name, goodUp }) => {
+        const val = latestM[key]
+        if (typeof val !== 'number') return []
+        const prevEntry = [...S.measureLog].slice(0, -1).reverse().find((m) => typeof m[key] === 'number')
+        const prevVal = prevEntry ? (prevEntry[key] as number) : null
+        const d = prevVal == null ? null : Math.round((val - prevVal) * 10) / 10
+        const improving = d == null ? null : goodUp ? d >= 0 : d <= 0
+        return [
+          {
+            name,
+            val: String(Math.round(val * 10) / 10),
+            delta: d == null ? '—' : `${d > 0 ? '+' : d < 0 ? '\u2212' : ''}${Math.abs(d).toFixed(1)}`,
+            deltaColor: d == null || d === 0 ? '#61616a' : improving ? '#3DDC84' : '#FF6A2C',
+          },
+        ]
+      })
+    : []
+
   const body = {
     weight: latestW > 0 ? latestW.toFixed(1).replace(/\.0$/, '') : '—',
     gain: Math.abs(gainNum).toFixed(1).replace(/\.0$/, ''),
     gainArrow: gainNum >= 0 ? '▲' : '▼',
     gainColor: gainNum >= 0 ? '#3DDC84' : '#FF6A2C',
-    goal: '84',
+    goalStr: S.profile.goalWeight?.trim() || '',
+    hasGoal: !!S.profile.goalWeight?.trim(),
     linePts: bpts,
     hasProfile,
     noProfile: !hasProfile,
@@ -628,13 +735,37 @@ function build(S: AppState, A: Actions) {
     noBmi: !bmi,
     protein,
     logRows,
-    measures: [
-      { name: 'Chest', val: '104', delta: '+2.0' },
-      { name: 'Arms', val: '38.5', delta: '+1.2' },
-      { name: 'Waist', val: '82', delta: '−1.0' },
-      { name: 'Thighs', val: '60', delta: '+1.5' },
-    ],
+    measures,
+    hasMeasures: measures.length > 0,
+    openMeasure: () => A.go('body'),
+    addMeasurement: (e: MeasureEntry) => A.addMeasurement(e),
   }
+
+  // ── settings (real, persisted, synced) ──
+  const settings = {
+    restSeconds: S.settings.restSeconds,
+    restChoices: REST_CHOICES.map((sec) => ({
+      sec,
+      label: sec % 60 === 0 ? `${sec / 60}:00` : `${Math.floor(sec / 60)}:${sec % 60}`,
+      active: S.settings.restSeconds === sec,
+      onPick: () => A.setSetting('restSeconds', sec),
+    })),
+    weekGoal: S.settings.weekGoal,
+    weekGoalChoices: [2, 3, 4, 5, 6, 7].map((n) => ({
+      n,
+      active: S.settings.weekGoal === n,
+      onPick: () => A.setSetting('weekGoal', n),
+    })),
+    showTips: S.settings.showTips,
+    toggleTips: () => A.setSetting('showTips', !S.settings.showTips),
+    name: S.profile.name ?? '',
+    setName: (v: string) => A.setProfileField('name', v),
+    goalWeight: S.profile.goalWeight ?? '',
+    setGoalWeight: (v: string) => A.setProfileField('goalWeight', v),
+    namePlaceholder: nameFromEmail(email),
+    back: () => A.go('you'),
+  }
+  const goSettings = () => A.go('settings')
 
   // ── session summary ──
   let summary: {
@@ -713,8 +844,12 @@ function build(S: AppState, A: Actions) {
   return {
     statusTime,
     greeting,
-    userName: 'Athlete',
-    userInitial: 'A',
+    userName,
+    userInitial,
+    userSubtitle,
+    userEmail: email ?? '',
+    settings,
+    goSettings,
     ...flags,
     nav,
     today,
@@ -724,6 +859,7 @@ function build(S: AppState, A: Actions) {
     rank,
     achievements,
     achEarned,
+    achHint,
     achTotal: achievements.length,
     goAchievements: () => A.go('achievements'),
     trainPreview,
@@ -817,5 +953,7 @@ export type ViewModel = ReturnType<typeof build>
 export function useViewModel(): ViewModel {
   const state = useAppState()
   const actions = useActions()
-  return useMemo(() => build(state, actions), [state, actions])
+  const { user } = useAuth()
+  const email = user?.email
+  return useMemo(() => build(state, actions, email), [state, actions, email])
 }

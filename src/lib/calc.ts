@@ -236,6 +236,19 @@ export function resolveAlts(e: Exercise, lifts: Record<string, LiftProgress>): R
   })
 }
 
+/**
+ * Has this movement actually been trained? Seed/tailored weights are a starting
+ * recommendation, not an achievement: an untrained lift must not claim progress.
+ */
+export function isTrained(name: string, lifts: Record<string, LiftProgress>): boolean {
+  return (lifts[name]?.history.length ?? 0) > 0
+}
+
+/** Percent start -> goal, but zero until the lift has actually been trained. */
+export function earnedPct(e: Pick<Exercise, 'name' | 'current' | 'start' | 'goal'>, lifts: Record<string, LiftProgress>): number {
+  return isTrained(e.name, lifts) ? pctVal(e) : 0
+}
+
 /** The movement actually performed for a slot — the swapped-in alt, or the lift itself. */
 export function performedName(e: Exercise, swaps: Record<number, string>): string {
   return swaps[e.id] || e.name

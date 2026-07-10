@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { e1rm, effectiveExercises, performedStats, progressLift, resolveAlts, stretchGoal, type SetResult } from './calc'
+import { e1rm, earnedPct, effectiveExercises, isTrained, pctVal, performedStats, progressLift, resolveAlts, stretchGoal, type SetResult } from './calc'
 import { SEED_EXERCISES } from '../data/exercises'
 import type { LiftProgress } from '../data/types'
 
@@ -142,5 +142,28 @@ describe('performedStats — what you actually train', () => {
   })
   it('falls back to the parent if the swap names an unknown movement', () => {
     expect(performedStats(bench(), { 1: 'Nonexistent Lift' }, {}).name).toBe('Bench Press')
+  })
+})
+
+describe('an untrained lift claims no progress', () => {
+  const untrained = {}
+  const trained = { 'Bench Press': base({ start: 50, current: 80, goal: 100, history: [{ date: '2026-07-09', weight: 80, reps: 8, e1rm: 101.3 }] }) }
+
+  it('isTrained is false until a session is actually logged', () => {
+    expect(isTrained('Bench Press', untrained)).toBe(false)
+    // a lifts entry with empty history still isn't training
+    expect(isTrained('Bench Press', { 'Bench Press': base() })).toBe(false)
+    expect(isTrained('Bench Press', trained)).toBe(true)
+  })
+
+  it('earnedPct is 0 for a seed lift — the bar must not look half full', () => {
+    const e = bench() // seed 50/70/90 => pctVal would be 50%
+    expect(pctVal(e)).toBe(50)
+    expect(earnedPct(e, untrained)).toBe(0)
+  })
+
+  it('earnedPct reports the real percentage once trained', () => {
+    const e = { ...bench(), start: 50, current: 80, goal: 100 }
+    expect(earnedPct(e, trained)).toBe(60)
   })
 })

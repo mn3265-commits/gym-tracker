@@ -10,7 +10,7 @@ export function Achievements({ vm }: { vm: ViewModel }) {
         <div style={{ fontFamily: "'Anton'", fontSize: 26, color: '#F4F4F5', textTransform: 'uppercase' }}>Achievements</div>
       </div>
       <div style={{ background: 'linear-gradient(120deg,#1c2408,#101013)', border: '1px solid #2f3d0a', borderRadius: 18, padding: '16px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontFamily: "'Archivo'", fontSize: 14, fontWeight: 700, color: '#e9f3c8' }}>Keep training to unlock them all</div>
+        <div style={{ fontFamily: "'Archivo'", fontSize: 14, fontWeight: 700, color: '#e9f3c8' }}>{vm.achHint}</div>
         <div style={{ fontFamily: "'Anton'", fontSize: 26, color: '#CCFF00' }}>{vm.achEarned}/{vm.achTotal}</div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>

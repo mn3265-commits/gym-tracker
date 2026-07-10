@@ -147,3 +147,218 @@ describe('CHOOSE_SWAP outside a workout (the Detail screen)', () => {
     expect(s.workout!.exercises.find((e) => e.id === 1)!.name).toBe('Machine Chest Press')
   })
 })
+
+describe('direct entry — typing the number instead of tapping +/-', () => {
+  const live = () => push()
+
+  it('sets an exact weight', () => {
+    const s = reducer(live(), { type: 'SET_WEIGHT', ei: 0, si: 0, kg: 82.5 })
+    expect(s.workout!.exercises[0]!.sets[0]!.weight).toBe(82.5)
+  })
+
+  it('rounds to a quarter kilo so a weight typed in lb survives the round trip', () => {
+    // 135 lb -> 61.2349 kg -> stored 61.25 -> displayed back as 135 lb
+    const s = reducer(live(), { type: 'SET_WEIGHT', ei: 0, si: 0, kg: 135 / 2.20462 })
+    const stored = s.workout!.exercises[0]!.sets[0]!.weight
+    expect(stored).toBe(61.25)
+    expect(Math.round(stored * 2.20462)).toBe(135)
+  })
+
+  it('ignores NaN, negatives and infinities rather than corrupting the set', () => {
+    const base = live()
+    const before = base.workout!.exercises[0]!.sets[0]!.weight
+    for (const kg of [NaN, -5, Infinity]) {
+      const s = reducer(base, { type: 'SET_WEIGHT', ei: 0, si: 0, kg })
+      expect(s.workout!.exercises[0]!.sets[0]!.weight).toBe(before)
+    }
+  })
+
+  it('sets exact reps, rounding a typed decimal', () => {
+    const s = reducer(live(), { type: 'SET_REPS', ei: 0, si: 0, reps: 11.6 })
+    expect(s.workout!.exercises[0]!.sets[0]!.reps).toBe(12)
+  })
+
+  it('is a no-op for a set that does not exist', () => {
+    const base = live()
+    expect(reducer(base, { type: 'SET_WEIGHT', ei: 99, si: 0, kg: 50 })).toBe(base)
+    expect(reducer(base, { type: 'SET_REPS', ei: 0, si: 99, reps: 5 })).toBe(base)
+  })
+
+  it('a typed weight then counts toward progression on finish', () => {
+    let s = live()
+    const sets = s.workout!.exercises[0]!.sets.length
+    for (let si = 0; si < sets; si++) {
+      s = reducer(s, { type: 'SET_WEIGHT', ei: 0, si, kg: 80 })
+      s = reducer(s, { type: 'SET_REPS', ei: 0, si, reps: 8 })
+      s = reducer(s, { type: 'TOGGLE_SET', ei: 0, si })
+    }
+    s = reducer(s, { type: 'FINISH_WORKOUT' })
+    expect(s.lifts['Bench Press']!.current).toBe(80)
+  })
+})
+
+describe('DELETE_SET', () => {
+  it('removes the set', () => {
+    const before = push()
+    const n = before.workout!.exercises[0]!.sets.length
+    const s = reducer(before, { type: 'DELETE_SET', ei: 0, si: 1 })
+    expect(s.workout!.exercises[0]!.sets).toHaveLength(n - 1)
+  })
+
+  it('refuses to delete the last set — ADD_SET copies the last one and would crash', () => {
+    let s = push()
+    while (s.workout!.exercises[0]!.sets.length > 1) s = reducer(s, { type: 'DELETE_SET', ei: 0, si: 0 })
+    const one = s
+    s = reducer(s, { type: 'DELETE_SET', ei: 0, si: 0 })
+    expect(s).toBe(one)
+    expect(s.workout!.exercises[0]!.sets).toHaveLength(1)
+    // and ADD_SET still works off that single set
+    expect(reducer(s, { type: 'ADD_SET', ei: 0 }).workout!.exercises[0]!.sets).toHaveLength(2)
+  })
+
+  it('cancels a rest timer that pointed at the deleted row', () => {
+    let s = push()
+    s = reducer(s, { type: 'TOGGLE_SET', ei: 0, si: 2 }) // starts rest, restOwner si=2
+    expect(s.restActive).toBe(true)
+    s = reducer(s, { type: 'DELETE_SET', ei: 0, si: 1 }) // rows shift under it
+    expect(s.restActive).toBe(false)
+    expect(s.restOwner).toBeNull()
+  })
+
+  it('leaves a rest timer on an earlier row alone', () => {
+    let s = push()
+    s = reducer(s, { type: 'TOGGLE_SET', ei: 0, si: 0 })
+    s = reducer(s, { type: 'DELETE_SET', ei: 0, si: 2 })
+    expect(s.restActive).toBe(true)
+  })
+})
+
+describe('adding and removing exercises mid-session', () => {
+  it('adds a movement that was not in today\'s split', () => {
+    let s = push() // Push day
+    const before = s.workout!.exercises.length
+    s = reducer(s, { type: 'ADD_EXERCISE', id: 11 }) // Back Squat
+    expect(s.workout!.exercises).toHaveLength(before + 1)
+    const added = s.workout!.exercises[s.workout!.exercises.length - 1]!
+    expect(added.name).toBe('Back Squat')
+    expect(added.sets.length).toBeGreaterThan(0)
+    expect(added.next).toBeGreaterThan(0)
+  })
+
+  it('programs an added movement at its earned weight, honouring a swap', () => {
+    let s = push({ ...initialState, swaps: { 11: 'Front Squat' } })
+    s = reducer(s, { type: 'ADD_EXERCISE', id: 11 })
+    expect(s.workout!.exercises[s.workout!.exercises.length - 1]!.name).toBe('Front Squat')
+  })
+
+  it('refuses a duplicate — it would fold that lift\'s progression in twice', () => {
+    let s = push()
+    const before = s.workout!.exercises.length
+    s = reducer(s, { type: 'ADD_EXERCISE', id: 1 }) // Bench Press already present
+    expect(s.workout!.exercises).toHaveLength(before)
+  })
+
+  it('closes the picker after adding', () => {
+    let s = reducer(push(), { type: 'TOGGLE_ADD_EX' })
+    expect(s.addExOpen).toBe(true)
+    s = reducer(s, { type: 'ADD_EXERCISE', id: 11 })
+    expect(s.addExOpen).toBe(false)
+  })
+
+  it('an added exercise earns real progression when completed', () => {
+    let s = reducer(push(), { type: 'ADD_EXERCISE', id: 11 })
+    s = completeAll(s)
+    s = reducer(s, { type: 'FINISH_WORKOUT' })
+    expect(s.lifts['Back Squat']).toBeDefined()
+    expect(s.lifts['Back Squat']!.history).toHaveLength(1)
+  })
+
+  it('removes an exercise, and drops a rest timer that pointed into it', () => {
+    let s = push()
+    s = reducer(s, { type: 'TOGGLE_SET', ei: 1, si: 0 })
+    expect(s.restActive).toBe(true)
+    const before = s.workout!.exercises.length
+    s = reducer(s, { type: 'REMOVE_EXERCISE', ei: 0 })
+    expect(s.workout!.exercises).toHaveLength(before - 1)
+    expect(s.restActive).toBe(false)
+  })
+})
+
+describe('settings are the user\'s, not constants', () => {
+  it('rest timer uses the chosen duration', () => {
+    let s: AppState = { ...initialState, settings: { ...initialState.settings, restSeconds: 90 } }
+    s = reducer(s, { type: 'START_WORKOUT', trainType: 'Push' })
+    s = reducer(s, { type: 'TOGGLE_SET', ei: 0, si: 0 })
+    expect(s.rest).toBe(90)
+    expect(s.restDur).toBe(90)
+  })
+
+  it('SET_SETTING updates one key without touching the rest', () => {
+    const s = reducer(initialState, { type: 'SET_SETTING', k: 'weekGoal', v: 3 })
+    expect(s.settings.weekGoal).toBe(3)
+    expect(s.settings.restSeconds).toBe(initialState.settings.restSeconds)
+  })
+})
+
+describe('measurements are logged, not invented', () => {
+  it('starts empty', () => {
+    expect(initialState.measureLog).toEqual([])
+  })
+
+  it('records a partial entry — you log what you measured', () => {
+    const s = reducer(initialState, { type: 'ADD_MEASUREMENT', entry: { date: '2026-07-09', arms: 38.5 } })
+    expect(s.measureLog).toHaveLength(1)
+    expect(s.measureLog[0]!.arms).toBe(38.5)
+    expect(s.measureLog[0]!.chest).toBeUndefined()
+  })
+
+  it('ignores an entry with no measurements at all', () => {
+    const s = reducer(initialState, { type: 'ADD_MEASUREMENT', entry: { date: '2026-07-09' } })
+    expect(s.measureLog).toHaveLength(0)
+  })
+
+  it('replaces the same day rather than stacking duplicates', () => {
+    let s = reducer(initialState, { type: 'ADD_MEASUREMENT', entry: { date: '2026-07-09', arms: 38 } })
+    s = reducer(s, { type: 'ADD_MEASUREMENT', entry: { date: '2026-07-09', arms: 39 } })
+    expect(s.measureLog).toHaveLength(1)
+    expect(s.measureLog[0]!.arms).toBe(39)
+  })
+
+  it('keeps entries in date order', () => {
+    let s = reducer(initialState, { type: 'ADD_MEASUREMENT', entry: { date: '2026-07-09', arms: 39 } })
+    s = reducer(s, { type: 'ADD_MEASUREMENT', entry: { date: '2026-07-02', arms: 38 } })
+    expect(s.measureLog.map((m) => m.date)).toEqual(['2026-07-02', '2026-07-09'])
+  })
+})
+
+describe('HYDRATE tolerates blobs from every earlier build', () => {
+  it('fills in settings and measureLog that predate them', () => {
+    const s = reducer(initialState, { type: 'HYDRATE', data: { xp: 5 } as Partial<AppState> })
+    expect(s.settings.restSeconds).toBe(initialState.settings.restSeconds)
+    expect(s.measureLog).toEqual([])
+  })
+
+  it('merges a partial settings object onto the defaults', () => {
+    const s = reducer(initialState, { type: 'HYDRATE', data: { settings: { weekGoal: 3 } } as unknown as Partial<AppState> })
+    expect(s.settings.weekGoal).toBe(3)
+    expect(s.settings.restSeconds).toBe(initialState.settings.restSeconds)
+    expect(s.settings.showTips).toBe(initialState.settings.showTips)
+  })
+})
+
+describe('weigh-ins carry a real date', () => {
+  it('ADD_WEIGHT stamps the day instead of labelling everything "This week"', () => {
+    let s = reducer(initialState, { type: 'SET_LOG_INPUT', v: '78.4' })
+    s = reducer(s, { type: 'ADD_WEIGHT' })
+    expect(s.weightLog).toHaveLength(1)
+    expect(s.weightLog[0]!.date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(s.weightLog[0]!.label).toBeUndefined()
+    expect(s.weightLog[0]!.w).toBe(78.4)
+  })
+
+  it('rejects a bodyweight below the sanity floor', () => {
+    let s = reducer(initialState, { type: 'SET_LOG_INPUT', v: '12' })
+    s = reducer(s, { type: 'ADD_WEIGHT' })
+    expect(s.weightLog).toHaveLength(0)
+  })
+})

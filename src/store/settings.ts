@@ -1,11 +1,15 @@
-// App-level settings — exposed as configurable design props in the prototype.
-// Fixed here (no settings UI shipped in the final design).
-export const SETTINGS = {
+import type { Settings } from '../data/types'
+
+/**
+ * Starting values only. The live values are `state.settings`, which the user
+ * edits on the Settings screen and which persists/syncs like everything else.
+ * 120s suits compound lifts; 5 sessions matches the seeded Push/Pull/Legs week.
+ */
+export const DEFAULT_SETTINGS: Settings = {
   restSeconds: 120,
   weekGoal: 5,
   showTips: true,
-} as const
+}
 
-// Today is fixed to a Legs day (Wednesday) to match the seeded demo state.
-export const TODAY_TYPE = 'Legs' as const
-export const TODAY_IDX = 2 // Wed (Mon=0)
+/** Rest-timer choices offered in the UI, in seconds. */
+export const REST_CHOICES = [60, 90, 120, 150, 180, 240] as const

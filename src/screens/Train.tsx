@@ -1,4 +1,5 @@
 import { BodyFigure } from '../components/BodyFigure'
+import { useEffect, useState } from 'react'
 import type { ViewModel } from '../store/viewModel'
 
 export function Train({ vm }: { vm: ViewModel }) {
@@ -77,20 +78,29 @@ function TrainLive({ vm }: { vm: ViewModel }) {
         {w.exercises.map((ex, ei) => (
           <div key={ei} style={{ background: '#141417', border: '1px solid #26262c', borderRadius: 20, overflow: 'hidden' }}>
             <div style={{ padding: '15px 17px 13px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div onClick={ex.onOpen} style={{ flex: 1, cursor: 'pointer', minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: "'Archivo'", fontSize: 16, fontWeight: 800, color: '#F4F4F5' }}>{ex.displayName}</span>
-                    <span style={{ fontFamily: "'Archivo'", fontSize: 9, fontWeight: 800, letterSpacing: '.5px', color: ex.roleColor, background: ex.roleBg, border: `1px solid ${ex.roleBorder}`, padding: '2px 6px', borderRadius: 6 }}>{ex.roleLabel}</span>
-                  </div>
-                  <div style={{ fontFamily: "'Archivo'", fontSize: 12, color: '#7d7d86', fontWeight: 500, marginTop: 2 }}>{ex.doneCount}/{ex.setCount} sets · {ex.equip} · {ex.subNote}</div>
+              {/* title on its own line, so a long name never fights the controls */}
+              <div onClick={ex.onOpen} style={{ cursor: 'pointer', minWidth: 0, marginBottom: 9 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span style={{ fontFamily: "'Archivo'", fontSize: 16, fontWeight: 800, color: '#F4F4F5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ex.displayName}</span>
+                  <span style={{ flexShrink: 0, fontFamily: "'Archivo'", fontSize: 9, fontWeight: 800, letterSpacing: '.5px', color: ex.roleColor, background: ex.roleBg, border: `1px solid ${ex.roleBorder}`, padding: '2px 6px', borderRadius: 6 }}>{ex.roleLabel}</span>
                 </div>
+                <div style={{ fontFamily: "'Archivo'", fontSize: 12, color: '#7d7d86', fontWeight: 500, marginTop: 2 }}>{ex.doneCount}/{ex.setCount} sets · {ex.equip} · {ex.subNote}</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ display: 'flex', background: '#0f0f12', border: '1px solid #26262c', borderRadius: 9, padding: 2, flexShrink: 0 }}>
                   <button onClick={ex.setKg} style={{ cursor: 'pointer', border: 'none', background: ex.unitKgBg, color: ex.unitKgColor, fontFamily: "'Archivo'", fontWeight: 800, fontSize: 10, padding: '6px 8px', borderRadius: 7 }}>KG</button>
                   <button onClick={ex.setLb} style={{ cursor: 'pointer', border: 'none', background: ex.unitLbBg, color: ex.unitLbColor, fontFamily: "'Archivo'", fontWeight: 800, fontSize: 10, padding: '6px 8px', borderRadius: 7 }}>LB</button>
                 </div>
-                <button onClick={ex.onSwap} style={{ flexShrink: 0, cursor: 'pointer', border: `1px solid ${ex.swapBorder}`, background: ex.swapBg, color: ex.swapColor, fontFamily: "'Archivo'", fontWeight: 700, fontSize: 11, padding: '8px 11px', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 5, letterSpacing: '.3px' }}>
+                <button onClick={ex.onSwap} style={{ flex: 1, justifyContent: 'center', cursor: 'pointer', border: `1px solid ${ex.swapBorder}`, background: ex.swapBg, color: ex.swapColor, fontFamily: "'Archivo'", fontWeight: 700, fontSize: 11, padding: '8px 11px', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 5, letterSpacing: '.3px' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7" /></svg>SWAP
+                </button>
+                <button
+                  onClick={ex.onRemoveExercise}
+                  aria-label={`Remove ${ex.displayName} from this workout`}
+                  title="Remove from this workout"
+                  style={{ flexShrink: 0, cursor: 'pointer', border: '1px solid #2a2a31', background: '#0f0f12', color: '#7d5560', borderRadius: 10, padding: '8px 9px', display: 'flex', alignItems: 'center' }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
                 </button>
               </div>
               {ex.swapOpen && (
@@ -120,29 +130,39 @@ function TrainLive({ vm }: { vm: ViewModel }) {
 
             {/* sets table */}
             <div style={{ padding: '12px 17px 15px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '22px 0.85fr 1.25fr 1.25fr 34px', gap: 6, alignItems: 'center', padding: '0 2px 8px', fontFamily: "'Archivo'", fontSize: 10, fontWeight: 700, color: '#61616a', letterSpacing: '.6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: SET_GRID, gap: 5, alignItems: 'center', padding: '0 2px 8px', fontFamily: "'Archivo'", fontSize: 10, fontWeight: 700, color: '#61616a', letterSpacing: '.6px' }}>
                 <span>#</span>
                 <span>PREV</span>
                 <span style={{ textAlign: 'center' }}>{ex.unitLabel}</span>
                 <span style={{ textAlign: 'center' }}>REPS</span>
                 <span />
+                <span />
               </div>
               {ex.sets.map((s, si) => (
-                <div key={si} style={{ display: 'grid', gridTemplateColumns: '22px 0.85fr 1.25fr 1.25fr 34px', gap: 6, alignItems: 'center', padding: '5px 2px', borderRadius: 10, background: s.rowBg, marginBottom: 4 }}>
+                <div key={si} style={{ display: 'grid', gridTemplateColumns: SET_GRID, gap: 5, alignItems: 'center', padding: '5px 2px', borderRadius: 10, background: s.rowBg, marginBottom: 4 }}>
                   <span style={{ fontFamily: "'Anton'", fontSize: 14, color: s.numColor, textAlign: 'center' }}>{s.num}</span>
-                  <span style={{ fontFamily: "'Archivo'", fontSize: 11, color: '#61616a', fontWeight: 600 }}>{s.prev}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                  <span style={{ fontFamily: "'Archivo'", fontSize: 10, color: '#61616a', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.prev}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                     <button onClick={s.dec} style={stepBtn}>–</button>
-                    <span style={{ fontFamily: "'Archivo'", fontWeight: 800, fontSize: 15, color: '#F4F4F5', minWidth: 30, textAlign: 'center' }}>{s.weight}</span>
+                    <NumField value={s.weight} onCommit={s.commitWeight} decimals width={38} ariaLabel={`${ex.displayName} set ${s.num} weight in ${ex.unitLabel}`} />
                     <button onClick={s.inc} style={stepBtn}>+</button>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                     <button onClick={s.repDec} style={stepBtn}>–</button>
-                    <span style={{ fontFamily: "'Archivo'", fontWeight: 800, fontSize: 15, color: '#F4F4F5', minWidth: 22, textAlign: 'center' }}>{s.reps}</span>
+                    <NumField value={s.reps} onCommit={s.commitReps} width={28} ariaLabel={`${ex.displayName} set ${s.num} reps`} />
                     <button onClick={s.repInc} style={stepBtn}>+</button>
                   </div>
-                  <button onClick={s.toggle} style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', border: `1px solid ${s.checkBorder}`, background: s.checkBg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={s.checkStroke} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                  <button onClick={s.toggle} style={{ width: 30, height: 30, borderRadius: 9, cursor: 'pointer', border: `1px solid ${s.checkBorder}`, background: s.checkBg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={s.checkStroke} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                  </button>
+                  <button
+                    onClick={s.remove}
+                    disabled={!s.canRemove}
+                    title={s.canRemove ? 'Delete set' : 'An exercise needs at least one set'}
+                    aria-label={`Delete ${ex.displayName} set ${s.num}`}
+                    style={{ width: 22, height: 30, borderRadius: 8, border: 'none', background: 'transparent', cursor: s.canRemove ? 'pointer' : 'default', opacity: s.canRemove ? 1 : 0.25, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7d5560" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6" /></svg>
                   </button>
                   {s.resting && (
                     <div style={{ gridColumn: '1 / -1', marginTop: 5, background: '#0f0f12', border: '1px solid #2a2a31', borderRadius: 11, padding: '8px 9px', display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -163,8 +183,113 @@ function TrainLive({ vm }: { vm: ViewModel }) {
             </div>
           </div>
         ))}
+
+        {/* add a movement mid-session */}
+        <div style={{ padding: '4px 3px 0' }}>
+          <button
+            onClick={w.addPicker.toggle}
+            style={{ width: '100%', border: `1px dashed ${w.addPicker.open ? '#CCFF00' : '#33333b'}`, background: w.addPicker.open ? '#1c2408' : 'transparent', cursor: 'pointer', color: w.addPicker.open ? '#CCFF00' : '#8a8a93', fontFamily: "'Archivo'", fontWeight: 800, fontSize: 12, padding: 13, borderRadius: 14, letterSpacing: '.4px' }}
+          >
+            {w.addPicker.open ? '× CLOSE' : '+ ADD EXERCISE'}
+          </button>
+
+          {w.addPicker.open && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {w.addPicker.empty ? (
+                <div style={{ fontFamily: "'Archivo'", fontSize: 12, color: '#61616a', fontWeight: 600, textAlign: 'center', padding: 16 }}>{w.addPicker.emptyHint}</div>
+              ) : (
+                w.addPicker.options.map((o) => (
+                  <div key={o.id} onClick={o.onPick} style={{ cursor: 'pointer', background: '#141417', border: '1px solid #26262c', borderRadius: 13, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 11 }}>
+                    <span style={{ width: 4, alignSelf: 'stretch', borderRadius: 3, background: o.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "'Archivo'", fontSize: 14, fontWeight: 700, color: '#F4F4F5' }}>{o.name}</div>
+                      <div style={{ fontFamily: "'Archivo'", fontSize: 11, color: '#7d7d86', fontWeight: 500 }}>{o.group} · {o.equip} · {o.scheme}</div>
+                    </div>
+                    <span style={{ fontFamily: "'Anton'", fontSize: 15, color: '#CCFF00', flexShrink: 0 }}>{o.nextStr}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
+  )
+}
+
+const SET_GRID = '20px 0.7fr 1.3fr 1.15fr 30px 22px'
+
+/**
+ * A number you can just type into. Kept as local text while focused so a
+ * half-typed value ("7", "") is never fed back through the store, and committed
+ * on blur or Enter. An unparseable entry snaps back instead of writing garbage.
+ */
+function NumField({
+  value,
+  onCommit,
+  width,
+  decimals = false,
+  ariaLabel,
+}: {
+  value: number
+  onCommit: (v: number) => void
+  width: number
+  decimals?: boolean
+  ariaLabel: string
+}) {
+  const [text, setText] = useState(String(value))
+  const [editing, setEditing] = useState(false)
+
+  // follow the store while not being edited (steppers, swaps, unit changes)
+  useEffect(() => {
+    if (!editing) setText(String(value))
+  }, [value, editing])
+
+  const commit = () => {
+    setEditing(false)
+    const n = parseFloat(text.replace(',', '.'))
+    if (!Number.isFinite(n) || n < 0) {
+      setText(String(value))
+      return
+    }
+    onCommit(n)
+  }
+
+  return (
+    <input
+      value={text}
+      aria-label={ariaLabel}
+      inputMode={decimals ? 'decimal' : 'numeric'}
+      onFocus={(e) => {
+        setEditing(true)
+        e.currentTarget.select()
+      }}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+        if (e.key === 'Escape') {
+          setText(String(value))
+          setEditing(false)
+          e.currentTarget.blur()
+        }
+      }}
+      style={{
+        width,
+        minWidth: 0,
+        background: editing ? '#1c2408' : 'transparent',
+        border: `1px solid ${editing ? '#2f3d0a' : 'transparent'}`,
+        borderRadius: 7,
+        outline: 'none',
+        color: '#F4F4F5',
+        fontFamily: "'Archivo'",
+        fontWeight: 800,
+        fontSize: 15,
+        textAlign: 'center',
+        padding: '3px 0',
+        appearance: 'none',
+      }}
+    />
   )
 }
 

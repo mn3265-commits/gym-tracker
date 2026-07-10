@@ -1,5 +1,6 @@
 import { ROTATION } from '../data/exercises'
-import type { FlashKind, Group, LiftProgress, Profile, Screen, Session, Summary, Unit, WeightEntry, Workout } from '../data/types'
+import { DEFAULT_SETTINGS } from './settings'
+import type { FlashKind, Group, LiftProgress, MeasureEntry, Profile, Screen, Session, Settings, Summary, Unit, WeightEntry, Workout } from '../data/types'
 
 export interface AppState {
   // ── persisted ──
@@ -18,6 +19,10 @@ export interface AppState {
    * seeded/tailored baseline still applies. Written only by FINISH_WORKOUT.
    */
   lifts: Record<string, LiftProgress>
+  /** user-editable; was a frozen constant */
+  settings: Settings
+  /** real tape measurements; the Body screen used to show four literals */
+  measureLog: MeasureEntry[]
 
   // ── ephemeral / navigation ──
   screen: Screen
@@ -34,6 +39,7 @@ export interface AppState {
   logInput: string
   logModalOpen: boolean
   openSwap: number | null
+  addExOpen: boolean
   sharing: boolean
   flash: FlashKind | null
 }
@@ -50,6 +56,8 @@ export const initialState: AppState = {
   swaps: {},
   sessions: [],
   lifts: {},
+  settings: { ...DEFAULT_SETTINGS },
+  measureLog: [],
 
   screen: 'home',
   filter: 'All',
@@ -65,6 +73,7 @@ export const initialState: AppState = {
   logInput: '',
   logModalOpen: false,
   openSwap: null,
+  addExOpen: false,
   sharing: false,
   flash: null,
 }
@@ -82,6 +91,8 @@ export const PERSIST_KEYS = [
   'swaps',
   'sessions',
   'lifts',
+  'settings',
+  'measureLog',
 ] as const
 
 export const STORAGE_KEY = 'gym-tracker:v2'

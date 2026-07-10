@@ -28,17 +28,6 @@ export function weekStartKey(d: Date): string {
 }
 
 /** The dates (1..31) of the current week, Monday..Sunday. */
-export function weekDates(now: Date = new Date()): number[] {
-  const idx = todayIdx(now)
-  const monday = new Date(now)
-  monday.setDate(now.getDate() - idx)
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday)
-    d.setDate(monday.getDate() + i)
-    return d.getDate()
-  })
-}
-
 /** Full Date for each day of the current week, Monday..Sunday. */
 export function weekDateObjects(now: Date = new Date()): Date[] {
   const idx = todayIdx(now)
@@ -77,3 +66,18 @@ export function resolveToday(program: Group[], now: Date = new Date()): TodayInf
 }
 
 export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+/**
+ * "This week" / "Last week" / "3 weeks ago", falling back to a date once the
+ * entry is old enough that a relative label stops being useful.
+ */
+export function weekLabel(dateKey: string, now: Date = new Date()): string {
+  const then = parseDay(dateKey)
+  const a = new Date(weekStartKey(now))
+  const b = new Date(weekStartKey(then))
+  const weeks = Math.round((a.getTime() - b.getTime()) / (7 * 24 * 60 * 60 * 1000))
+  if (weeks <= 0) return 'This week'
+  if (weeks === 1) return 'Last week'
+  if (weeks <= 8) return `${weeks} weeks ago`
+  return `${then.getDate()} ${MONTHS[then.getMonth()]}`
+}

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react'
 import { reducer, type Action } from './reducer'
 import { initialState, loadPersisted, savePersisted, STORAGE_KEY, type AppState } from './state'
-import type { Group, Screen, Unit } from '../data/types'
+import type { Group, Screen, Unit, MeasureEntry } from '../data/types'
 import { useAuth } from './auth'
 import { loadRemote, pickPersisted, saveRemote } from './sync'
 
@@ -16,7 +16,7 @@ export interface Actions {
   openEx: (id: number) => void
   setProg: (id: number) => void
   setFilter: (filter: string) => void
-  setProfileField: (k: 'bw' | 'height', v: string) => void
+  setProfileField: (k: 'bw' | 'height' | 'name' | 'goalWeight', v: string) => void
   setLogInput: (v: string) => void
   openLog: () => void
   closeLog: () => void
@@ -30,6 +30,14 @@ export interface Actions {
   bump: (ei: number, si: number, d: number) => void
   bumpReps: (ei: number, si: number, d: number) => void
   addSet: (ei: number) => void
+  setWeightKg: (ei: number, si: number, kg: number) => void
+  setReps: (ei: number, si: number, reps: number) => void
+  deleteSet: (ei: number, si: number) => void
+  toggleAddEx: () => void
+  addExercise: (id: number) => void
+  removeExercise: (ei: number) => void
+  setSetting: (k: 'restSeconds' | 'weekGoal' | 'showTips', v: number | boolean) => void
+  addMeasurement: (entry: MeasureEntry) => void
   addRest: (sec: number) => void
   skipRest: () => void
   finishWorkout: () => void
@@ -151,6 +159,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       bump: (ei, si, dd) => d({ type: 'BUMP', ei, si, d: dd }),
       bumpReps: (ei, si, dd) => d({ type: 'BUMP_REPS', ei, si, d: dd }),
       addSet: (ei) => d({ type: 'ADD_SET', ei }),
+      setWeightKg: (ei, si, kg) => d({ type: 'SET_WEIGHT', ei, si, kg }),
+      setReps: (ei, si, reps) => d({ type: 'SET_REPS', ei, si, reps }),
+      deleteSet: (ei, si) => d({ type: 'DELETE_SET', ei, si }),
+      toggleAddEx: () => d({ type: 'TOGGLE_ADD_EX' }),
+      addExercise: (id) => d({ type: 'ADD_EXERCISE', id }),
+      removeExercise: (ei) => d({ type: 'REMOVE_EXERCISE', ei }),
+      setSetting: (k, v) => d({ type: 'SET_SETTING', k, v }),
+      addMeasurement: (entry) => d({ type: 'ADD_MEASUREMENT', entry }),
       addRest: (sec) => d({ type: 'ADD_REST', sec }),
       skipRest: () => d({ type: 'SKIP_REST' }),
       finishWorkout: () => {
