@@ -5,32 +5,95 @@ Source:  Everkinetic — https://github.com/everkinetic/data
 License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
          https://creativecommons.org/licenses/by-sa/4.0/
 
-The SVG files in this directory are redistributed unmodified. The app recolours
-them at display time (CSS invert) so they read on a dark background; the files
-themselves are byte-for-byte as published.
+Every main lift and every swap alternative in the app is illustrated with two
+frames (target muscle stretched, then contracted). The SVG files here are
+redistributed unmodified; the app recolours them at display time (CSS invert +
+screen blend) to read on a dark background. The files themselves are byte-for-
+byte as published.
 
-Under CC BY-SA 4.0 these illustrations, and any adaptation of them, remain under
-the same licence. Attribution is shown in the app on each exercise's detail
-screen and repeated here.
+Under CC BY-SA 4.0 these illustrations, and any adaptation, stay under the same
+licence. Attribution is shown in-app on each exercise's detail screen.
 
-Per-lift source illustration:
+Per-movement source illustration:
 
-  Bench Press          <- Bench Press
-  Overhead Press       <- Seated Military Press
-  Incline DB Press     <- Incline Dumbbell Press
-  Triceps Pushdown     <- Triceps Pushdown with Cable
-  Lateral Raise        <- Lateral Dumbbell Raises
-  Deadlift             <- Barbell Dead Lifts
-  Weighted Pull-up     <- Pull Ups
-  Barbell Row          <- Reverse Grips Bent Over Barbell Rows
-  Lat Pulldown         <- Underhand Pull-down
-  Barbell Curl         <- Biceps Curls with Barbell
-  Back Squat           <- Barbell Squat
-  Romanian Deadlift    <- Romanian Dead Lift
-  Leg Press            <- Leg Press
-  Seated Leg Curl      <- Seated Leg Curl
-  Standing Calf Raise  <- Standing Barbell Calf Raise
+  Bench Press             <- Bench Press
+  Overhead Press          <- Seated Military Press
+  Incline DB Press        <- Incline Dumbbell Press
+  Triceps Pushdown        <- Triceps Pushdown with Cable
+  Lateral Raise           <- Lateral Dumbbell Raises
+  Deadlift                <- Barbell Dead Lifts
+  Weighted Pull-up        <- Pull Ups
+  Barbell Row             <- Reverse Grips Bent Over Barbell Rows
+  Lat Pulldown            <- Underhand Pull down
+  Barbell Curl            <- Biceps Curls with Barbell
+  Back Squat              <- Barbell Squat
+  Romanian Deadlift       <- Romanian Dead Lift
+  Leg Press               <- Leg Press
+  Seated Leg Curl         <- Seated Leg Curl
+  Standing Calf Raise     <- Standing Barbell Calf Raise
+  Dumbbell Bench Press    <- Bench Press Dumbbell
+  Machine Chest Press     <- Machine Bench Press
+  Weighted Push-up        <- Push Ups
+  Seated DB Shoulder Press<- One Arm Dumbbell Shoulder Press
+  Machine Shoulder Press  <- Seated Military Press
+  Arnold Press            <- One Arm Dumbbell Shoulder Press
+  Incline Barbell Press   <- Incline Bench Press
+  Incline Machine Press   <- Incline Bench Press
+  Low-to-High Cable Fly   <- Cable Crossover
+  Overhead Cable Extension<- Standing Overhead Triceps Extension with Barbell
+  Skull Crushers          <- Lying Triceps Press with Barbell
+  Bench Dips              <- Bench Dips
+  Cable Lateral Raise     <- Lateral Dumbbell Raises
+  Machine Lateral Raise   <- Lateral Dumbbell Raises
+  Upright Row             <- Upright Barbell Rows
+  Trap-Bar Deadlift       <- Barbell Dead Lifts
+  Rack Pull               <- Barbell Dead Lifts
+  Assisted Pull-up        <- Pull Ups
+  Chin-up                 <- Wide Grip Chin Up
+  Pull-up                 <- Pull Ups
+  Dumbbell Row            <- Reverse Grips Bent Over Barbell Rows
+  Chest-Supported Row     <- Seated Cable Rows
+  Seated Cable Row        <- Seated Cable Rows
+  Straight-Arm Pulldown   <- Straight Arm Push Down
+  Machine Pulldown        <- V Bar Pull Down
+  Dumbbell Curl           <- Biceps Curl with Dumbbell
+  Cable Curl              <- Standing Biceps Curl with Cable
+  Preacher Curl           <- Preacher Curl with Barbell
+  Front Squat             <- Front Squat with Barbell
+  Hack Squat              <- Hack Squat Machine
+  Goblet Squat            <- Squats using Dumbbells
+  Lying Leg Curl          <- Standing Leg Curls
+  Good Morning            <- Barbell Good Mornings
+  Dumbbell RDL            <- Romanian Dead Lift
+  Bulgarian Split Squat   <- Rear Lunges with Dumbbell
+  Nordic Curl             (no illustration — no honest match)
+  Leg-Press Calf Raise    <- Calves Press on Leg Machine
+  Seated Calf Raise       <- Seated Calf Raise with Barbell
+  Single-Leg Calf Raise   <- Seated One Leg Calf Raise with Dumbbell
 
-Three of these are the closest honest variant Everkinetic publishes rather than
-an exact match, and the app says so on screen:
-  Overhead Press (seated), Barbell Row (underhand grip), Lat Pulldown (underhand grip).
+Closest honest variant rather than an exact match (the app says so on screen):
+
+  Overhead Press (shown seated)
+  Barbell Row (shown underhand)
+  Lat Pulldown (shown underhand)
+  Weighted Push-up (bodyweight shown)
+  Seated DB Shoulder Press (shown one-arm)
+  Machine Shoulder Press (shown with barbell)
+  Arnold Press (dumbbell press shown)
+  Incline Machine Press (shown with barbell)
+  Low-to-High Cable Fly (crossover shown)
+  Overhead Cable Extension (shown with barbell)
+  Cable Lateral Raise (shown with dumbbell)
+  Machine Lateral Raise (shown with dumbbell)
+  Trap-Bar Deadlift (shown with barbell)
+  Rack Pull (shown as full deadlift)
+  Assisted Pull-up (assist not shown)
+  Chin-up (wide grip shown)
+  Dumbbell Row (shown with barbell)
+  Chest-Supported Row (seated cable shown)
+  Machine Pulldown (v-bar shown)
+  Goblet Squat (shown with dumbbells)
+  Lying Leg Curl (shown standing)
+  Dumbbell RDL (shown with barbell)
+  Bulgarian Split Squat (shown as rear lunge)
+  Single-Leg Calf Raise (shown seated)

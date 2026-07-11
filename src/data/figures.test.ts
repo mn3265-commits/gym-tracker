@@ -5,18 +5,33 @@ import { SEED_EXERCISES } from './exercises'
 
 const PUBLIC = new URL('../../public/exercise/', import.meta.url).pathname
 
+/** Every movement the app can show: the 15 lifts plus all their swap alternatives. */
+function allMovementNames(): string[] {
+  const names = new Set<string>()
+  for (const e of SEED_EXERCISES) {
+    names.add(e.name)
+    for (const a of e.alts) names.add(a.n)
+  }
+  return [...names]
+}
+
 describe('exercise figures', () => {
-  it('every main lift has an illustration', () => {
-    const missing = SEED_EXERCISES.filter((e) => !FIGURES[e.name]).map((e) => e.name)
+  it('every movement — lift or swap alternative — is in the figure map', () => {
+    const missing = allMovementNames().filter((n) => !(n in FIGURES))
     expect(missing).toEqual([])
   })
 
-  it('both frames exist on disk for every figure', () => {
+  it('only Nordic Curl has no illustration (nothing honest to show)', () => {
+    const nulls = Object.entries(FIGURES).filter(([, v]) => v === null).map(([k]) => k)
+    expect(nulls).toEqual(['Nordic Curl'])
+  })
+
+  it('both frames exist on disk for every mapped figure', () => {
     const missing: string[] = []
     for (const fig of Object.values(FIGURES)) {
+      if (!fig) continue
       for (const phase of ['start', 'end']) {
-        const f = `${PUBLIC}${fig.slug}-${phase}.svg`
-        if (!existsSync(f)) missing.push(`${fig.slug}-${phase}.svg`)
+        if (!existsSync(`${PUBLIC}${fig.slug}-${phase}.svg`)) missing.push(`${fig.slug}-${phase}.svg`)
       }
     }
     expect(missing).toEqual([])
@@ -24,6 +39,7 @@ describe('exercise figures', () => {
 
   it('the frames are real SVGs, not an error page', () => {
     for (const fig of Object.values(FIGURES)) {
+      if (!fig) continue
       const svg = readFileSync(`${PUBLIC}${fig.slug}-start.svg`, 'utf8')
       expect(svg.startsWith('<svg')).toBe(true)
       expect(svg.length).toBeGreaterThan(500)
@@ -32,22 +48,24 @@ describe('exercise figures', () => {
 
   it('start and end are actually different drawings', () => {
     for (const fig of Object.values(FIGURES)) {
+      if (!fig) continue
       const a = readFileSync(`${PUBLIC}${fig.slug}-start.svg`, 'utf8')
       const b = readFileSync(`${PUBLIC}${fig.slug}-end.svg`, 'utf8')
       expect(a).not.toBe(b)
     }
   })
 
-  it('returns null for a swap alternative rather than the parent\'s picture', () => {
-    // showing a bench-press drawing for a machine chest press would be a lie
-    expect(figureFor('Machine Chest Press')).toBeNull()
-    expect(figureFor('Front Squat')).toBeNull()
-    expect(figureFor('Bench Press')).not.toBeNull()
+  it('no two movements share a slug (each gets its own file pair)', () => {
+    const slugs = Object.values(FIGURES).filter(Boolean).map((f) => f!.slug)
+    expect(new Set(slugs).size).toBe(slugs.length)
   })
 
-  it('flags the three lifts whose art is a variant, not an exact match', () => {
-    const noted = Object.entries(FIGURES).filter(([, f]) => f.variantNote).map(([k]) => k)
-    expect(noted.sort()).toEqual(['Barbell Row', 'Lat Pulldown', 'Overhead Press'])
+  it('figureFor resolves a main lift, a swap alt, and the one null', () => {
+    expect(figureFor('Bench Press')).not.toBeNull()
+    expect(figureFor('Machine Chest Press')).not.toBeNull()
+    expect(figureFor('Front Squat')).not.toBeNull()
+    expect(figureFor('Nordic Curl')).toBeNull()
+    expect(figureFor('Not A Real Movement')).toBeNull()
   })
 
   it('ships the licence file the CC BY-SA attribution requires', () => {
