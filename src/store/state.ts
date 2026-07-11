@@ -23,6 +23,8 @@ export interface AppState {
   settings: Settings
   /** real tape measurements; the Body screen used to show four literals */
   measureLog: MeasureEntry[]
+  /** progress photos, keyed by slot id, as downscaled data URLs — synced, not localStorage-only */
+  photos: Record<string, string>
 
   // ── ephemeral / navigation ──
   screen: Screen
@@ -58,6 +60,7 @@ export const initialState: AppState = {
   lifts: {},
   settings: { ...DEFAULT_SETTINGS },
   measureLog: [],
+  photos: {},
 
   screen: 'home',
   filter: 'All',
@@ -93,6 +96,7 @@ export const PERSIST_KEYS = [
   'lifts',
   'settings',
   'measureLog',
+  'photos',
 ] as const
 
 export const STORAGE_KEY = 'gym-tracker:v2'

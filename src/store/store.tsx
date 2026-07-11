@@ -39,6 +39,8 @@ export interface Actions {
   removeExercise: (ei: number) => void
   setSetting: (k: 'restSeconds' | 'weekGoal' | 'showTips', v: number | boolean) => void
   addMeasurement: (entry: MeasureEntry) => void
+  setPhoto: (slot: string, dataUrl: string | null) => void
+  importState: (data: Partial<AppState>) => void
   addRest: (sec: number) => void
   skipRest: () => void
   finishWorkout: () => void
@@ -177,6 +179,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeExercise: (ei) => d({ type: 'REMOVE_EXERCISE', ei }),
       setSetting: (k, v) => d({ type: 'SET_SETTING', k, v }),
       addMeasurement: (entry) => d({ type: 'ADD_MEASUREMENT', entry }),
+      setPhoto: (slot, dataUrl) => d({ type: 'SET_PHOTO', slot, dataUrl }),
+      importState: (data) => d({ type: 'IMPORT_STATE', data }),
       addRest: (sec) => d({ type: 'ADD_REST', sec }),
       skipRest: () => d({ type: 'SKIP_REST' }),
       finishWorkout: () => {

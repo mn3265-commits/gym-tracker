@@ -407,3 +407,33 @@ describe('warm-up sets', () => {
     expect(warmed.xp).toBe(plain.xp)
   })
 })
+
+describe('progress photos (synced, not localStorage-only)', () => {
+  it('stores a photo by slot', () => {
+    const s = reducer(initialState, { type: 'SET_PHOTO', slot: 'start', dataUrl: 'data:image/jpeg;base64,AAA' })
+    expect(s.photos.start).toBe('data:image/jpeg;base64,AAA')
+  })
+  it('clears a photo', () => {
+    let s = reducer(initialState, { type: 'SET_PHOTO', slot: 'now', dataUrl: 'data:x' })
+    s = reducer(s, { type: 'SET_PHOTO', slot: 'now', dataUrl: null })
+    expect(s.photos.now).toBeUndefined()
+  })
+  it('photos are a persisted key so they sync', async () => {
+    const { PERSIST_KEYS } = await import('./state')
+    expect(PERSIST_KEYS).toContain('photos')
+  })
+})
+
+describe('IMPORT_STATE (restore from backup)', () => {
+  it('replaces persisted data and normalises it like HYDRATE', () => {
+    const backup = { xp: 999, sessions: [], program: initialState.program }
+    const s = reducer(initialState, { type: 'IMPORT_STATE', data: backup as Partial<AppState> })
+    expect(s.xp).toBe(999)
+    expect(s.photos).toEqual({}) // filled in even though the backup omitted it
+    expect(s.settings.restSeconds).toBe(initialState.settings.restSeconds)
+  })
+  it('tolerates a partial/older backup without throwing', () => {
+    const s = reducer(initialState, { type: 'IMPORT_STATE', data: { lifts: null } as unknown as Partial<AppState> })
+    expect(s.lifts).toEqual({})
+  })
+})

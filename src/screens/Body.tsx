@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ImageSlot } from '../components/ImageSlot'
+import { PhotoSlot } from '../components/PhotoSlot'
 import { dayKey } from '../lib/day'
 import type { MeasureEntry } from '../data/types'
 import type { ViewModel } from '../store/viewModel'
@@ -174,10 +174,10 @@ export function Body({ vm }: { vm: ViewModel }) {
       <div style={{ fontFamily: "'Archivo Expanded','Archivo'", fontSize: 14, fontWeight: 800, color: '#F4F4F5', margin: '0 2px 12px' }}>Progress photos</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
         <div style={{ position: 'relative', height: 200, borderRadius: 18, overflow: 'hidden', border: '1px solid #2a2a31' }}>
-          <ImageSlot id="body-photo-start" placeholder="Start photo" />
+          <PhotoSlot src={b.photoStart} placeholder="Start photo" onSet={(u) => b.setPhoto('start', u)} />
         </div>
         <div style={{ position: 'relative', height: 200, borderRadius: 18, overflow: 'hidden', border: '1px solid #2a2a31' }}>
-          <ImageSlot id="body-photo-now" placeholder="Latest photo" />
+          <PhotoSlot src={b.photoNow} placeholder="Latest photo" onSet={(u) => b.setPhoto('now', u)} />
         </div>
       </div>
     </div>

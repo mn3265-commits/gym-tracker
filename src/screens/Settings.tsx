@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ViewModel } from '../store/viewModel'
 
 /** A text field that commits on blur, so typing never round-trips through the store. */
@@ -121,6 +121,63 @@ export function Settings({ vm }: { vm: ViewModel }) {
           </div>
         </div>
       </Section>
+
+      <Section title="Your data" hint={`${s.sessionCount} sessions synced. Export a backup, or restore one.`}>
+        <DataButtons exportData={s.exportData} importData={s.importData} />
+      </Section>
     </div>
+  )
+}
+
+/** Download the full state as JSON, or restore it from a file. */
+function DataButtons({ exportData, importData }: { exportData: () => string; importData: (parsed: unknown) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [msg, setMsg] = useState('')
+
+  const doExport = () => {
+    const blob = new Blob([exportData()], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `buildnotbought-backup-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const doImport = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      const parsed = JSON.parse(await file.text())
+      importData(parsed)
+      setMsg('Restored ✓')
+    } catch {
+      setMsg("That file isn't a valid backup")
+    }
+    setTimeout(() => setMsg(''), 3000)
+  }
+
+  const btn: React.CSSProperties = {
+    flex: 1,
+    cursor: 'pointer',
+    border: '1px solid #2a2a31',
+    background: '#141417',
+    color: '#F4F4F5',
+    fontFamily: "'Archivo'",
+    fontWeight: 700,
+    fontSize: 13,
+    padding: 13,
+    borderRadius: 12,
+  }
+  return (
+    <>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button onClick={doExport} style={btn}>Export backup</button>
+        <button onClick={() => inputRef.current?.click()} style={btn}>Restore…</button>
+      </div>
+      {msg && <div style={{ fontFamily: "'Archivo'", fontSize: 12, fontWeight: 600, color: msg.includes('✓') ? '#3DDC84' : '#FF6A2C', marginTop: 8 }}>{msg}</div>}
+      <input ref={inputRef} type="file" accept="application/json,.json" onChange={(e) => void doImport(e.target.files?.[0])} style={{ display: 'none' }} />
+    </>
   )
 }

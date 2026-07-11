@@ -48,6 +48,8 @@ export type Action =
   | { type: 'REMOVE_EXERCISE'; ei: number }
   | { type: 'SET_SETTING'; k: keyof AppState['settings']; v: number | boolean }
   | { type: 'ADD_MEASUREMENT'; entry: MeasureEntry }
+  | { type: 'SET_PHOTO'; slot: string; dataUrl: string | null }
+  | { type: 'IMPORT_STATE'; data: Partial<AppState> }
   | { type: 'TICK_REST' }
   | { type: 'ADD_REST'; sec: number }
   | { type: 'SKIP_REST' }
@@ -103,6 +105,7 @@ export function reducer(state: AppState, action: Action): AppState {
       const next = { ...state, ...action.data }
       if (!next.lifts || typeof next.lifts !== 'object') next.lifts = {}
       if (!Array.isArray(next.measureLog)) next.measureLog = []
+      if (!next.photos || typeof next.photos !== 'object') next.photos = {}
       next.settings = { ...initialState.settings, ...(next.settings ?? {}) }
       if (!next.profile || typeof next.profile !== 'object') next.profile = { ...initialState.profile }
       return next
@@ -131,6 +134,19 @@ export function reducer(state: AppState, action: Action): AppState {
       // one entry per day: re-logging today replaces it rather than stacking
       const rest = state.measureLog.filter((m) => m.date !== e.date)
       return { ...state, measureLog: [...rest, e].sort((a, b) => a.date.localeCompare(b.date)).slice(-60) }
+    }
+
+    case 'SET_PHOTO': {
+      const photos = { ...state.photos }
+      if (action.dataUrl) photos[action.slot] = action.dataUrl
+      else delete photos[action.slot]
+      return { ...state, photos }
+    }
+
+    case 'IMPORT_STATE': {
+      // Restore from a backup file: take only the persisted keys, then run the
+      // same normalisation HYDRATE does so a hand-edited or older export is safe.
+      return reducer(state, { type: 'HYDRATE', data: action.data })
     }
 
     case 'SET_LOG_INPUT':

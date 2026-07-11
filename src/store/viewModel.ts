@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useActions, useAppState, type Actions } from './store'
 import { useAuth } from './auth'
 import { REST_CHOICES } from './settings'
+import { pickPersisted } from './sync'
 import { C, VOLT } from '../data/tokens'
 import { BACK_ZONES, EQUIP, FRONT_ZONES } from '../data/exercises'
 import type { AppState } from './state'
@@ -761,6 +762,9 @@ function build(S: AppState, A: Actions, email?: string) {
     hasMeasures: measures.length > 0,
     openMeasure: () => A.go('body'),
     addMeasurement: (e: MeasureEntry) => A.addMeasurement(e),
+    photoStart: S.photos['start'] ?? null,
+    photoNow: S.photos['now'] ?? null,
+    setPhoto: (slot: string, dataUrl: string | null) => A.setPhoto(slot, dataUrl),
   }
 
   // ── settings (real, persisted, synced) ──
@@ -785,6 +789,13 @@ function build(S: AppState, A: Actions, email?: string) {
     goalWeight: S.profile.goalWeight ?? '',
     setGoalWeight: (v: string) => A.setProfileField('goalWeight', v),
     namePlaceholder: nameFromEmail(email),
+    // backup: the full personalized state as a JSON snapshot, and restore from one
+    exportData: () => JSON.stringify({ app: 'buildnotbought', version: 2, exportedAt: new Date().toISOString(), data: pickPersisted(S) }, null, 2),
+    importData: (parsed: unknown) => {
+      const blob = parsed && typeof parsed === 'object' && 'data' in parsed ? (parsed as { data: unknown }).data : parsed
+      if (blob && typeof blob === 'object') A.importState(blob as Partial<AppState>)
+    },
+    sessionCount: S.sessions.length,
     back: () => A.go('you'),
   }
   const goSettings = () => A.go('settings')

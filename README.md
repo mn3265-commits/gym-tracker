@@ -94,3 +94,16 @@ never clobbered by a staler cloud copy on reopen. The API itself is never cached
 
 Installable to the home screen with a real icon and a standalone, portrait,
 fullscreen launch (`manifest.webmanifest` + apple-touch-icon).
+
+## Backup, photos & environments
+
+- **Backup/restore.** Settings → Your data exports the full personalized state as
+  a JSON file and restores it (`IMPORT_STATE`, normalised through the same guard
+  as a cloud hydrate, so an older/partial backup is safe).
+- **Progress photos sync.** They live in the state blob (downscaled to a small
+  JPEG, ~tens of KB) rather than the old localStorage-only slot, so they follow
+  the account across devices without a separate storage service.
+- **Environments.** Production, Development and **Preview** each have Turso creds.
+  Preview points at an isolated `gym-tracker-preview` database, so branch/PR
+  deploys never 500 and never touch production data. Keep its schema in sync with
+  `scripts/init-db.mjs` if the tables change.
