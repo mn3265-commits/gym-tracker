@@ -45,6 +45,7 @@ export function Detail({ vm }: { vm: ViewModel }) {
             <div>
               <div style={{ fontFamily: "'Archivo'", fontSize: 11, fontWeight: 700, color: '#a9c93f', letterSpacing: '.5px', textTransform: 'uppercase' }}>Your next target</div>
               <div style={{ fontFamily: "'Anton'", fontSize: 40, color: '#CCFF00', lineHeight: 1, marginTop: 3 }}>{d.nextStr}</div>
+              {d.nextPlates && <div style={{ fontFamily: "'Archivo'", fontSize: 11, color: '#7d7d86', fontWeight: 600, marginTop: 4 }}>plates: {d.nextPlates}</div>}
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontFamily: "'Archivo'", fontSize: 12, color: '#8a8a93', fontWeight: 600 }}>now {d.currentStr}</div>

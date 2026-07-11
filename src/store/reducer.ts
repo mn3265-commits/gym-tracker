@@ -10,9 +10,13 @@ import {
   rankInfo,
   repTop,
   setCount,
+  warmupRamp,
 } from '../lib/calc'
+import { EQUIP } from '../data/exercises'
 import { dayKey } from '../lib/day'
 import type { LiftProgress, MeasureEntry } from '../data/types'
+
+const isBarbell = (movementName: string) => EQUIP[movementName] === 'Barbell'
 
 export type Action =
   | { type: 'NAV'; screen: Screen }
@@ -38,6 +42,7 @@ export type Action =
   | { type: 'SET_REPS'; ei: number; si: number; reps: number }
   | { type: 'DELETE_SET'; ei: number; si: number }
   | { type: 'ADD_SET'; ei: number }
+  | { type: 'TOGGLE_WARMUP'; ei: number }
   | { type: 'TOGGLE_ADD_EX' }
   | { type: 'ADD_EXERCISE'; id: number }
   | { type: 'REMOVE_EXERCISE'; ei: number }
@@ -301,6 +306,34 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, workout: w }
     }
 
+    case 'TOGGLE_WARMUP': {
+      if (!state.workout) return state
+      const exi = state.workout.exercises[action.ei]
+      if (!exi) return state
+      const w = clone(state.workout)
+      const target = w.exercises[action.ei]!
+      if (target.sets.some((s) => s.warmup)) {
+        // already ramped — clear the warm-ups, leaving the work sets
+        target.sets = target.sets.filter((s) => !s.warmup)
+        return { ...state, workout: w }
+      }
+      const src = effEx(state).find((e) => e.id === exi.id)
+      const st = src ? performedStats(src, state.swaps, state.lifts) : null
+      const ramp = warmupRamp(target.next, st?.inc ?? 2.5, isBarbell(target.name))
+      if (!ramp.length) return state // nothing to ramp (machine, or already light)
+      const warmSets = ramp.map((r) => ({
+        weight: r.weight,
+        reps: r.reps,
+        goalReps: r.reps,
+        target: r.weight,
+        prev: 'warm-up',
+        done: false,
+        warmup: true,
+      }))
+      target.sets = [...warmSets, ...target.sets]
+      return { ...state, workout: w }
+    }
+
     case 'TOGGLE_ADD_EX':
       return { ...state, addExOpen: !state.addExOpen }
 
@@ -357,7 +390,9 @@ export function reducer(state: AppState, action: Action): AppState {
             goal: st.goal,
             history: [],
           }
-          const updated = progressLift(prev, exi.sets, st.inc, today)
+          // Warm-ups are a logging aid, never progress: fold in the work sets only.
+          const workSets = exi.sets.filter((s) => !s.warmup)
+          const updated = progressLift(prev, workSets, st.inc, today)
           if (updated !== prev) nextLifts[st.name] = updated
         })
         lifts = nextLifts
@@ -370,14 +405,16 @@ export function reducer(state: AppState, action: Action): AppState {
         const exercises = w.exercises.map((exi) => {
           const src = ex.find((x) => x.id === exi.id)!
           const swapName = state.swaps[exi.id] || src.name
-          const doneSets = exi.sets.filter((s) => s.done)
+          // scoring counts work sets only — warm-ups don't earn XP, volume or target-hits
+          const workSets = exi.sets.filter((s) => !s.warmup)
+          const doneSets = workSets.filter((s) => s.done)
           setsDone += doneSets.length
-          setsPlanned += exi.sets.length
+          setsPlanned += workSets.length
           doneSets.forEach((s) => {
             totalVolume += s.weight * s.reps
           })
-          const allDone = exi.sets.length > 0 && exi.sets.every((s) => s.done)
-          const allMet = allDone && exi.sets.every((s) => s.weight >= s.target && s.reps >= s.goalReps)
+          const allDone = workSets.length > 0 && workSets.every((s) => s.done)
+          const allMet = allDone && workSets.every((s) => s.weight >= s.target && s.reps >= s.goalReps)
           let status: SummaryStatus = 'skipped'
           if (allDone) status = allMet ? 'hit' : 'miss'
           else if (doneSets.length > 0) status = 'partial'

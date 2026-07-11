@@ -25,6 +25,90 @@ export function toNum(n: number, unit: Unit): number {
   return unit === 'lb' ? toLb(n) : n
 }
 
+// ── Plate maths ──────────────────────────────────────────────────────────────
+/** Standard loadable plates, heaviest first, in each unit. */
+const PLATES_KG = [25, 20, 15, 10, 5, 2.5, 1.25]
+const PLATES_LB = [45, 35, 25, 10, 5, 2.5]
+/** An Olympic bar. */
+export const BAR_KG = 20
+export const BAR_LB = 45
+
+export interface PlatePlan {
+  /** the bar, in the chosen unit */
+  bar: number
+  /** plates for ONE side, heaviest first */
+  perSide: number[]
+  /** the plan loads exactly to the target; false if a fraction is left over */
+  exact: boolean
+  /** unloadable remainder per side, in the chosen unit (0 when exact) */
+  leftover: number
+  /** target could not even be reached with the bar (weight < bar) */
+  belowBar: boolean
+}
+
+/**
+ * How to load a barbell to `totalKg`, expressed in the lifter's unit.
+ * Greedy from the heaviest plate — which is optimal for a canonical plate set —
+ * and honest about anything that can't be loaded exactly (leftover), instead of
+ * silently rounding the target the way a naive calculator would.
+ */
+export function platesFor(totalKg: number, unit: Unit): PlatePlan {
+  const bar = unit === 'lb' ? BAR_LB : BAR_KG
+  const plates = unit === 'lb' ? PLATES_LB : PLATES_KG
+  const total = toNum(totalKg, unit)
+  if (total < bar) return { bar, perSide: [], exact: total === bar, leftover: 0, belowBar: true }
+
+  let perSideWeight = (total - bar) / 2
+  const perSide: number[] = []
+  for (const p of plates) {
+    while (perSideWeight >= p - 1e-9) {
+      perSide.push(p)
+      perSideWeight -= p
+    }
+  }
+  const leftover = Math.round(perSideWeight * 100) / 100
+  return { bar, perSide, exact: leftover === 0, leftover, belowBar: false }
+}
+
+/** "20 · 20 · 2.5" — plates per side, for a compact label. */
+export function platesLabel(plan: PlatePlan): string {
+  if (plan.belowBar) return 'bar only'
+  if (!plan.perSide.length) return 'empty bar'
+  return plan.perSide.map((p) => (Number.isInteger(p) ? String(p) : String(p))).join(' · ')
+}
+
+// ── Warm-up ramp ─────────────────────────────────────────────────────────────
+export interface WarmupSet {
+  weight: number
+  reps: number
+}
+
+/**
+ * A sensible warm-up ramp toward a working weight: the empty bar, then a few
+ * ascending sets at ~50/70/85%, reps tapering as the load climbs. Only worth
+ * showing for a barbell — a machine or a light dumbbell needs no ramp — and
+ * only when the working weight is heavy enough to have rungs beneath it.
+ *
+ * Weights round to the increment; duplicate rungs (a light lift where 50% and
+ * 70% collapse onto the bar) are dropped. These never count toward progression.
+ */
+export function warmupRamp(workingKg: number, inc: number, isBarbell: boolean): WarmupSet[] {
+  if (!isBarbell || workingKg <= BAR_KG) return []
+  const steps: [number, number][] = [
+    [BAR_KG, 8],
+    [Math.max(BAR_KG, roundInc(workingKg * 0.5, inc)), 5],
+    [roundInc(workingKg * 0.7, inc), 3],
+    [roundInc(workingKg * 0.85, inc), 2],
+  ]
+  const out: WarmupSet[] = []
+  for (const [weight, reps] of steps) {
+    if (weight >= workingKg) continue // never warm up at or above the work set
+    if (out.some((w) => w.weight === weight)) continue
+    out.push({ weight, reps })
+  }
+  return out
+}
+
 // ── Scheme / target math ─────────────────────────────────────────────────────
 /** Top of the rep range from a scheme like "4 × 6–8" → 8. */
 export function repTop(e: Pick<Exercise, 'scheme'>): number {

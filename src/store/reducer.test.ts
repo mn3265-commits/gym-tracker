@@ -362,3 +362,48 @@ describe('weigh-ins carry a real date', () => {
     expect(s.weightLog).toHaveLength(0)
   })
 })
+
+describe('warm-up sets', () => {
+  const barbellPush = () => push() // Bench Press is barbell, id 1 at index 0
+
+  it('prepends a ramp and marks them warmup', () => {
+    const s = reducer(barbellPush(), { type: 'TOGGLE_WARMUP', ei: 0 })
+    const sets = s.workout!.exercises[0]!.sets
+    expect(sets.some((x) => x.warmup)).toBe(true)
+    expect(sets[0]!.warmup).toBe(true)
+    // work sets still there
+    expect(sets.filter((x) => !x.warmup).length).toBe(4)
+  })
+
+  it('toggling again clears the warm-ups', () => {
+    let s = reducer(barbellPush(), { type: 'TOGGLE_WARMUP', ei: 0 })
+    s = reducer(s, { type: 'TOGGLE_WARMUP', ei: 0 })
+    expect(s.workout!.exercises[0]!.sets.some((x) => x.warmup)).toBe(false)
+  })
+
+  it('does nothing on a machine/dumbbell exercise', () => {
+    // swap bench to a dumbbell press first, then it should not ramp
+    let s = push({ ...initialState, swaps: { 1: 'Dumbbell Bench Press' } })
+    const before = s.workout!.exercises[0]!.sets.length
+    s = reducer(s, { type: 'TOGGLE_WARMUP', ei: 0 })
+    expect(s.workout!.exercises[0]!.sets.length).toBe(before)
+  })
+
+  it('excludes warm-ups from progression — only work sets bump the weight', () => {
+    let s = reducer(barbellPush(), { type: 'TOGGLE_WARMUP', ei: 0 })
+    // complete every set (warm-ups included) at their prescribed values
+    s.workout!.exercises[0]!.sets.forEach((_, si) => { s = reducer(s, { type: 'TOGGLE_SET', ei: 0, si }) })
+    s = reducer(s, { type: 'FINISH_WORKOUT' })
+    // bench working weight still advances to 72.5 (from 70+2.5), warm-ups ignored
+    expect(s.lifts['Bench Press']!.current).toBe(72.5)
+    // and history logs the top WORK set (72.5), not a warm-up
+    expect(s.lifts['Bench Press']!.history[0]!.weight).toBe(72.5)
+  })
+
+  it('warm-up reps do not inflate volume or XP', () => {
+    const plain = (() => { let s = barbellPush(); s.workout!.exercises.forEach((e, ei) => e.sets.forEach((_, si) => { s = reducer(s, { type: 'TOGGLE_SET', ei, si }) })); return reducer(s, { type: 'FINISH_WORKOUT' }) })()
+    const warmed = (() => { let s = reducer(barbellPush(), { type: 'TOGGLE_WARMUP', ei: 0 }); s.workout!.exercises.forEach((e, ei) => e.sets.forEach((_, si) => { s = reducer(s, { type: 'TOGGLE_SET', ei, si }) })); return reducer(s, { type: 'FINISH_WORKOUT' }) })()
+    // adding warm-ups to exercise 0 must not change xp vs the plain run
+    expect(warmed.xp).toBe(plain.xp)
+  })
+})

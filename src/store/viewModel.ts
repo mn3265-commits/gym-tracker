@@ -14,6 +14,8 @@ import {
   fmtClock,
   fmtWeight,
   nextWeight,
+  platesFor,
+  platesLabel,
   proteinFor,
   rankInfo,
   renderBody,
@@ -283,7 +285,9 @@ function build(S: AppState, A: Actions, email?: string) {
       clock: fmtClock(S.elapsed),
       exercises: W.exercises.map((exi, ei) => {
         const src = ex.find((x) => x.id === exi.id)!
-        const done = exi.sets.filter((s) => s.done).length
+        // warm-ups are a logging aid — they never count toward the target banner
+        const workSets = exi.sets.filter((s) => !s.warmup)
+        const done = workSets.filter((s) => s.done).length
         const ri = roleInfo(src.role)
         const display = S.swaps[exi.id] || src.name
         const swapped = display !== src.name
@@ -293,8 +297,10 @@ function build(S: AppState, A: Actions, email?: string) {
         const resolvedAlts = resolveAlts(src, S.lifts)
         const stats2 = performedStats(src, S.swaps, S.lifts)
         const gr = repTop(src)
-        const allDone = exi.sets.length > 0 && exi.sets.every((s) => s.done)
-        const allMet = allDone && exi.sets.every((s) => s.weight >= exi.next && s.reps >= gr)
+        const allDone = workSets.length > 0 && workSets.every((s) => s.done)
+        const allMet = allDone && workSets.every((s) => s.weight >= exi.next && s.reps >= gr)
+        const barbell = equipOf(display) === 'Barbell'
+        const hasWarmup = exi.sets.some((s) => s.warmup)
         const nextJump = kg(Math.min(exi.next + stats2.inc, stats2.goal), display)
         let bTitle: string, bHint: string, bBg: string, bBorder: string, bAccent: string, bLabelColor: string, bHintColor: string
         if (allMet) {
@@ -315,7 +321,7 @@ function build(S: AppState, A: Actions, email?: string) {
           bHintColor = '#f0d8c8'
         } else {
           bTitle = 'TARGET TO GROW'
-          bHint = `Do all ${exi.sets.length} sets × ${gr} reps at ${kg(exi.next, display)}`
+          bHint = `Do all ${workSets.length} sets × ${gr} reps at ${kg(exi.next, display)}`
           bBg = 'linear-gradient(100deg,#1c2408,#141417)'
           bBorder = '#2f3d0a'
           bAccent = VOLT
@@ -331,8 +337,13 @@ function build(S: AppState, A: Actions, email?: string) {
           nextStr: kg(exi.next, display),
           unitLabel: exUnit.toUpperCase(),
           doneCount: done,
-          setCount: exi.sets.length,
+          setCount: workSets.length,
           subNote: swapped ? `swapped · ${exi.muscle}` : exi.muscle,
+          // warm-up ramp: only offered for a barbell heavy enough to have rungs
+          canWarmup: barbell && exi.next > 20,
+          hasWarmup,
+          warmupLabel: hasWarmup ? 'CLEAR WARM-UP' : '+ WARM-UP',
+          onToggleWarmup: () => A.toggleWarmup(ei),
           roleLabel: ri.label,
           roleColor: ri.color,
           roleBg: ri.bg,
@@ -375,17 +386,23 @@ function build(S: AppState, A: Actions, email?: string) {
           onOpen: () => A.openEx(exi.id),
           addSet: () => A.addSet(ei),
           sets: exi.sets.map((s, si) => {
-            const met = s.done && s.weight >= s.target && s.reps >= s.goalReps
-            const missed = s.done && !met
+            const met = !s.warmup && s.done && s.weight >= s.target && s.reps >= s.goalReps
+            const missed = !s.warmup && s.done && !met
             const resting = S.restActive && S.restOwner != null && S.restOwner.ei === ei && S.restOwner.si === si
             const restDur = S.restDur || S.settings.restSeconds
+            // plate breakdown, only meaningful for a loaded barbell
+            const plan = barbell ? platesFor(s.weight, exUnit) : null
+            const numWork = exi.sets.slice(0, si + 1).filter((x) => !x.warmup).length
             return {
-              num: si + 1,
+              num: s.warmup ? 'W' : String(numWork),
+              warmup: !!s.warmup,
+              plateStr: plan && !plan.belowBar ? platesLabel(plan) : '',
+              plateExact: plan ? plan.exact : true,
               prev: s.prev.replace(/\s*(kg|lb)\s*/i, '').replace(/\s*\u00d7\s*/, '\u00d7'),
               weight: num(s.weight, display),
               reps: s.reps,
-              rowBg: met ? '#12240f' : missed ? '#241408' : 'transparent',
-              numColor: s.done ? (met ? '#3DDC84' : '#FF6A2C') : '#61616a',
+              rowBg: s.warmup ? '#131316' : met ? '#12240f' : missed ? '#241408' : 'transparent',
+              numColor: s.warmup ? '#7d7d86' : s.done ? (met ? '#3DDC84' : '#FF6A2C') : '#61616a',
               checkBg: s.done ? (met ? '#3DDC84' : '#FF6A2C') : '#0f0f12',
               checkBorder: s.done ? (met ? '#3DDC84' : '#FF6A2C') : '#33333b',
               checkStroke: s.done ? '#0B0B0D' : '#3a3a42',
@@ -518,6 +535,12 @@ function build(S: AppState, A: Actions, email?: string) {
     currentStr: kg(de.current, de.name),
     goalStr: kg(de.goal, de.name),
     nextStr: kg(nextWeight(de), de.name),
+    // plate breakdown for the next target, barbell lifts only
+    nextPlates: (() => {
+      if (equipOf(dPerformed) !== 'Barbell') return ''
+      const plan = platesFor(nextWeight(de), dUnit)
+      return plan.belowBar ? '' : `${platesLabel(plan)} / side`
+    })(),
     tempoParts: [
       { label: 'DOWN', sec: de.tempo[0], color: '#F4F4F5' },
       { label: 'HOLD', sec: de.tempo[1], color: '#8a8a93' },

@@ -164,6 +164,16 @@ function TrainLive({ vm }: { vm: ViewModel }) {
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7d5560" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6" /></svg>
                   </button>
+                  {(s.plateStr || s.warmup) && (
+                    <div style={{ gridColumn: '3 / 5', marginTop: -1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                      {s.warmup && <span style={{ fontFamily: "'Archivo'", fontSize: 8, fontWeight: 800, letterSpacing: '.6px', color: '#7d7d86' }}>WARM-UP</span>}
+                      {s.plateStr && (
+                        <span style={{ fontFamily: "'Archivo'", fontSize: 9, fontWeight: 600, color: s.plateExact ? '#61616a' : '#7d6a2c' }}>
+                          {s.plateStr}/side{!s.plateExact ? ' +' : ''}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {s.resting && (
                     <div style={{ gridColumn: '1 / -1', marginTop: 5, background: '#0f0f12', border: '1px solid #2a2a31', borderRadius: 11, padding: '8px 9px', display: 'flex', alignItems: 'center', gap: 7 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#CCFF00" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2M9 2h6" /></svg>
@@ -179,7 +189,17 @@ function TrainLive({ vm }: { vm: ViewModel }) {
                   )}
                 </div>
               ))}
-              <button onClick={ex.addSet} style={{ width: '100%', marginTop: 6, border: '1px dashed #33333b', background: 'transparent', cursor: 'pointer', color: '#8a8a93', fontFamily: "'Archivo'", fontWeight: 700, fontSize: 12, padding: 10, borderRadius: 11, letterSpacing: '.3px' }}>+ ADD SET</button>
+              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                <button onClick={ex.addSet} style={{ flex: 1, border: '1px dashed #33333b', background: 'transparent', cursor: 'pointer', color: '#8a8a93', fontFamily: "'Archivo'", fontWeight: 700, fontSize: 12, padding: 10, borderRadius: 11, letterSpacing: '.3px' }}>+ ADD SET</button>
+                {ex.canWarmup && (
+                  <button
+                    onClick={ex.onToggleWarmup}
+                    style={{ flex: 1, border: `1px dashed ${ex.hasWarmup ? '#3d2a0a' : '#33333b'}`, background: ex.hasWarmup ? '#241408' : 'transparent', cursor: 'pointer', color: ex.hasWarmup ? '#e0964f' : '#8a8a93', fontFamily: "'Archivo'", fontWeight: 700, fontSize: 12, padding: 10, borderRadius: 11, letterSpacing: '.3px' }}
+                  >
+                    {ex.warmupLabel}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}

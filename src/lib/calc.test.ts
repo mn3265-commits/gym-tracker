@@ -167,3 +167,66 @@ describe('an untrained lift claims no progress', () => {
     expect(earnedPct(e, trained)).toBe(60)
   })
 })
+
+import { BAR_KG, platesFor, platesLabel, warmupRamp } from './calc'
+
+describe('platesFor — loading the bar', () => {
+  it('lays out 100kg as 20kg bar + 4 plates per side', () => {
+    const p = platesFor(100, 'kg')
+    expect(p.bar).toBe(20)
+    expect(p.perSide).toEqual([25, 15]) // (100-20)/2 = 40, greedy = 25+15 (two plates)
+    expect(p.exact).toBe(true)
+    expect(p.leftover).toBe(0)
+  })
+
+  it('handles an odd target with the small plates, greedily', () => {
+    // (105-20)/2 = 42.5 = 25+15+2.5
+    expect(platesFor(105, 'kg').perSide).toEqual([25, 15, 2.5])
+  })
+
+  it('flags a weight the plate set cannot load exactly', () => {
+    // (61.25-20)/2 = 20.625 -> 20 + 0.625 leftover
+    const p = platesFor(61.25, 'kg')
+    expect(p.exact).toBe(false)
+    expect(p.leftover).toBeGreaterThan(0)
+  })
+
+  it('reports an empty bar and a below-bar target', () => {
+    expect(platesFor(20, 'kg').perSide).toEqual([])
+    expect(platesFor(20, 'kg').belowBar).toBe(false)
+    expect(platesFor(15, 'kg').belowBar).toBe(true)
+  })
+
+  it('loads in pounds off a 45lb bar', () => {
+    // 135 lb: (135-45)/2 = 45 -> one 45 per side
+    const p = platesFor(135 / 2.20462, 'lb')
+    expect(p.bar).toBe(45)
+    expect(p.perSide).toEqual([45])
+  })
+
+  it('labels the plates compactly', () => {
+    expect(platesLabel(platesFor(140, 'kg'))).toBe('25 · 25 · 10')
+  })
+})
+
+describe('warmupRamp', () => {
+  it('ramps a heavy barbell lift from the empty bar up', () => {
+    const r = warmupRamp(100, 2.5, true)
+    expect(r.length).toBeGreaterThanOrEqual(3)
+    expect(r[0]!.weight).toBe(BAR_KG) // starts at the empty bar
+    expect(r.every((w) => w.weight < 100)).toBe(true) // never at/above the work weight
+    // ascending
+    for (let i = 1; i < r.length; i++) expect(r[i]!.weight).toBeGreaterThanOrEqual(r[i - 1]!.weight)
+  })
+
+  it('gives no ramp for a machine or a light lift', () => {
+    expect(warmupRamp(100, 2.5, false)).toEqual([]) // not a barbell
+    expect(warmupRamp(20, 2.5, true)).toEqual([]) // only the bar
+  })
+
+  it('drops duplicate rungs on a lighter barbell lift', () => {
+    const r = warmupRamp(30, 2.5, true)
+    const weights = r.map((w) => w.weight)
+    expect(new Set(weights).size).toBe(weights.length)
+  })
+})

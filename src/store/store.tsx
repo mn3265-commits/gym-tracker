@@ -30,6 +30,7 @@ export interface Actions {
   bump: (ei: number, si: number, d: number) => void
   bumpReps: (ei: number, si: number, d: number) => void
   addSet: (ei: number) => void
+  toggleWarmup: (ei: number) => void
   setWeightKg: (ei: number, si: number, kg: number) => void
   setReps: (ei: number, si: number, reps: number) => void
   deleteSet: (ei: number, si: number) => void
@@ -159,6 +160,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       bump: (ei, si, dd) => d({ type: 'BUMP', ei, si, d: dd }),
       bumpReps: (ei, si, dd) => d({ type: 'BUMP_REPS', ei, si, d: dd }),
       addSet: (ei) => d({ type: 'ADD_SET', ei }),
+      toggleWarmup: (ei) => d({ type: 'TOGGLE_WARMUP', ei }),
       setWeightKg: (ei, si, kg) => d({ type: 'SET_WEIGHT', ei, si, kg }),
       setReps: (ei, si, reps) => d({ type: 'SET_REPS', ei, si, reps }),
       deleteSet: (ei, si) => d({ type: 'DELETE_SET', ei, si }),

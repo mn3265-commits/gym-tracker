@@ -90,6 +90,8 @@ export interface WorkoutSet {
   target: number
   prev: string
   done: boolean
+  /** a ramp-up set: logged for the record but excluded from all scoring */
+  warmup?: boolean
 }
 
 export interface WorkoutExercise {
